@@ -4,7 +4,7 @@ from app import db
 from models import WorkoutPlan, PlanExercise, Exercise, MuscleGroup
 import os
 import base64
-import json 
+import json
 import requests as http_requests
 
 workouts_bp = Blueprint('workouts', __name__)
@@ -118,7 +118,7 @@ Regras:
 
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-1.5-flash:generateContent?key={api_key}"
+        f"gemini-2.0-flash:generateContent?key={api_key}"
     )
 
     resp = http_requests.post(url, json=payload, timeout=60)
@@ -289,7 +289,7 @@ def delete(plan_id):
     db.session.delete(plan)
     db.session.commit()
     flash('Plano removido.', 'success')
-    return  redirect(url_for('workouts.index'))
+    return redirect(url_for('workouts.index'))
 
 
 @workouts_bp.route('/api/exercises/by-group/<int:group_id>')
