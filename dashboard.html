@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Treino {{ session.date.strftime('%d/%m/%Y') }}{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <a href="{{ url_for('history.index') }}" class="topbar-back">←</a>
+    <h1>Detalhes do Treino</h1>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <!-- Header -->
+    <div class="card" style="background:var(--coral); border:none; margin-bottom:16px;">
+        <div style="font-size:0.8rem; color:rgba(255,255,255,0.7); font-weight:600; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Data</div>
+        <h2 style="font-family:'Syne',sans-serif; color:white; font-size:1.4rem; font-weight:800; margin-bottom:8px;">
+            {{ session.date.strftime('%d de %B de %Y') }}
+        </h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            {% if session.plan %}
+            <span class="badge" style="background:rgba(255,255,255,0.25);">{{ session.plan.name }}</span>
+            {% endif %}
+            {% if session.duration_minutes %}
+            <span class="badge" style="background:rgba(255,255,255,0.25);">⏱ {{ session.duration_minutes }} min</span>
+            {% endif %}
+            <span class="badge" style="background:rgba(255,255,255,0.25);">💪 {{ session.session_exercises|length }} exercícios</span>
+        </div>
+    </div>
+
+    {% if session.notes %}
+    <div class="card" style="margin-bottom:12px; border-left:3px solid var(--coral);">
+        <div style="font-size:0.8rem; color:#888; font-weight:700; margin-bottom:4px; text-transform:uppercase;">Observações</div>
+        <p style="font-size:0.92rem; color:#444;">{{ session.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Exercises -->
+    {% if session.session_exercises %}
+    <div class="section-header" style="margin-bottom:10px;">
+        <span class="section-title">Exercícios realizados</span>
+    </div>
+    {% for se in session.session_exercises %}
+    <div class="card" style="margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--coral); color:white; font-family:'Syne',sans-serif; font-weight:800; font-size:0.85rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                {{ loop.index }}
+            </div>
+            <div>
+                <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:0.95rem;">{{ se.exercise.name }}</div>
+                <div style="font-size:0.75rem; color:#888;">{{ se.exercise.muscle_group.name }}</div>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <div style="text-align:center; background:#F7F5F3; border-radius:8px; padding:8px 4px;">
+                <div style="font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; color:var(--coral);">{{ se.sets_done or '—' }}</div>
+                <div style="font-size:0.7rem; color:#888; font-weight:600;">Séries</div>
+            </div>
+            <div style="text-align:center; background:#F7F5F3; border-radius:8px; padding:8px 4px;">
+                <div style="font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; color:var(--coral);">{{ se.reps_done or '—' }}</div>
+                <div style="font-size:0.7rem; color:#888; font-weight:600;">Reps</div>
+            </div>
+            <div style="text-align:center; background:#F7F5F3; border-radius:8px; padding:8px 4px;">
+                <div style="font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; color:var(--coral);">
+                    {% if se.weight_kg %}{{ se.weight_kg }}kg{% else %}—{% endif %}
+                </div>
+                <div style="font-size:0.7rem; color:#888; font-weight:600;">Carga</div>
+            </div>
+        </div>
+        {% if se.notes %}
+        <div style="margin-top:8px; font-size:0.82rem; color:#888; font-style:italic;">{{ se.notes }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">💪</div>
+        <p style="color:#888;">Nenhum exercício registrado neste treino.</p>
+    </div>
+    {% endif %}
+
+    <hr class="divider">
+    <form method="POST" action="{{ url_for('history.delete', session_id=session.id) }}" onsubmit="return confirm('Remover este registro?')">
+        <button type="submit" class="btn btn-block" style="background:#FEE; color:#E74C3C; width:100%; font-family:'Syne',sans-serif; font-weight:700; border-radius:12px; padding:12px; border:none; cursor:pointer;">
+            🗑 Remover registro
+        </button>
+    </form>
+</div>
+{% endblock %}

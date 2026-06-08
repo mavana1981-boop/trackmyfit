@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Registro{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <h1>Registro</h1>
+    <div class="topbar-right">
+        <a href="{{ url_for('history.record') }}" class="topbar-btn">+ Registrar</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    {% if sessions %}
+        <div class="card" style="padding:0 16px;">
+            {% for session in sessions %}
+            <a href="{{ url_for('history.detail', session_id=session.id) }}" class="list-item">
+                <div class="list-item-body">
+                    <div class="list-item-name" style="font-size:1.1rem;">
+                        {{ session.date.strftime('%d %b. %Y') }}
+                    </div>
+                    <div class="list-item-sub" style="margin-top:4px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        {% if session.plan %}
+                        <span class="badge badge-coral" style="font-size:0.68rem;">{{ session.plan.name }}</span>
+                        {% endif %}
+                        <span>{{ session.session_exercises|length }} exercício{% if session.session_exercises|length != 1 %}s{% endif %}</span>
+                        {% if session.duration_minutes %}
+                        <span>· {{ session.duration_minutes }}min</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="list-arrow">›</span>
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <div class="empty-title">Nenhum treino registrado</div>
+            <p style="font-size:0.85rem; margin-top:6px; margin-bottom:20px; color:#888;">Comece a registrar seus treinos para acompanhar sua evolução</p>
+            <a href="{{ url_for('history.record') }}" class="btn btn-coral">➕ Registrar treino</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

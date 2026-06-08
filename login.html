@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Exercícios{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <h1>Exercícios</h1>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <!-- Toggle tabs (visual only, groups shown by default) -->
+    <div style="display:flex; background:white; border-radius:50px; padding:4px; margin-bottom:20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06);">
+        <button onclick="showTab('grupos')" id="tab-grupos" style="flex:1; padding:10px; border:none; border-radius:50px; background:var(--coral); color:white; font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer;">Grupos</button>
+        <button onclick="showTab('todos')" id="tab-todos" style="flex:1; padding:10px; border:none; border-radius:50px; background:transparent; color:#888; font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer;">Todos</button>
+    </div>
+
+    <!-- Groups view -->
+    <div id="view-grupos">
+        <div class="card" style="padding:0 16px;">
+            {% for group in groups %}
+            <a href="{{ url_for('exercises.group', group_id=group.id) }}" class="list-item">
+                <div class="list-icon">{{ group.icon }}</div>
+                <div class="list-item-body">
+                    <div class="list-item-name">{{ group.name }}</div>
+                    <div class="list-item-sub">
+                        <span class="badge" style="font-size:0.7rem;">{{ group.exercise_count() }} exercícios</span>
+                    </div>
+                </div>
+                <span class="list-arrow">›</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- All exercises view -->
+    <div id="view-todos" style="display:none;">
+        <div style="margin-bottom:12px;">
+            <input type="text" id="search" class="form-control" placeholder="🔍  Buscar exercício...">
+        </div>
+        <div class="card" style="padding:0 16px;">
+            {% for group in groups %}
+                {% for exercise in group.exercises %}
+                <a href="{{ url_for('exercises.detail', exercise_id=exercise.id) }}" class="list-item" data-name="{{ exercise.name|lower }}">
+                    <div class="list-icon" style="font-size:1.2rem;">{{ group.icon }}</div>
+                    <div class="list-item-body">
+                        <div class="list-item-name">{{ exercise.name }}</div>
+                        <div class="list-item-sub">
+                            {{ group.name }}
+                            <span class="chip chip-{{ exercise.difficulty|lower }}" style="margin-left:6px;">{{ exercise.difficulty }}</span>
+                        </div>
+                    </div>
+                    <span class="list-arrow">›</span>
+                </a>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTab(tab) {
+    document.getElementById('view-grupos').style.display = tab === 'grupos' ? 'block' : 'none';
+    document.getElementById('view-todos').style.display = tab === 'todos' ? 'block' : 'none';
+    document.getElementById('tab-grupos').style.background = tab === 'grupos' ? 'var(--coral)' : 'transparent';
+    document.getElementById('tab-grupos').style.color = tab === 'grupos' ? 'white' : '#888';
+    document.getElementById('tab-todos').style.background = tab === 'todos' ? 'var(--coral)' : 'transparent';
+    document.getElementById('tab-todos').style.color = tab === 'todos' ? 'white' : '#888';
+}
+document.getElementById('search').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('[data-name]').forEach(el => {
+        el.style.display = el.dataset.name.includes(q) ? 'flex' : 'none';
+    });
+});
+</script>
+{% endblock %}
