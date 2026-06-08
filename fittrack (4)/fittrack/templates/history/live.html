@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+{% block title %}Treino ao Vivo{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <a href="{{ url_for('history.start') }}" class="topbar-back"
+       onclick="return confirm('Sair do treino?')">✕</a>
+    <div style="flex:1; text-align:center;">
+        <div style="font-size:0.6rem; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; font-weight:700;">Ao vivo</div>
+        <h1 style="font-size:0.95rem; font-weight:800;">{{ plan_name }}</h1>
+    </div>
+    <div id="timer" style="font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; color:var(--red); min-width:48px; text-align:right; letter-spacing:-0.5px;">0:00</div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Nav dots */
+.ex-nav { display:flex; gap:5px; padding:10px 16px; overflow-x:auto; background:var(--bg2); border-bottom:1px solid var(--border); scrollbar-width:none; }
+.ex-nav::-webkit-scrollbar { display:none; }
+.ex-dot {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    background:var(--bg4); border:1px solid var(--border);
+    font-family:'Syne',sans-serif; font-weight:800; font-size:0.7rem; color:var(--text2);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.15s;
+}
+.ex-dot.active { background:var(--red); border-color:var(--red); color:white; }
+.ex-dot.done { border-color:var(--success); color:var(--success); }
+
+/* Cards */
+.ex-card { display:none; }
+.ex-card.active { display:block; }
+
+.ex-hero {
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:16px; padding:18px; margin-bottom:12px; position:relative; overflow:hidden;
+}
+.ex-hero::after { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background:var(--red-glow); }
+.ex-group { font-size:0.65rem; color:var(--red); font-weight:800; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px; }
+.ex-name { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:800; line-height:1.1; margin-bottom:10px; position:relative; z-index:1; }
+.ex-meta { display:flex; gap:6px; flex-wrap:wrap; position:relative; z-index:1; }
+
+/* Sets */
+.sets-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:12px; }
+.sets-head { display:grid; grid-template-columns:28px 1fr 1fr 40px; gap:4px; padding:8px 14px; background:var(--bg4); border-bottom:1px solid var(--border); }
+.sets-head span { font-family:'Syne',sans-serif; font-size:0.6rem; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; text-align:center; }
+.set-row { display:grid; grid-template-columns:28px 1fr 1fr 40px; gap:4px; padding:8px 14px; border-bottom:1px solid var(--border); align-items:center; transition:background 0.15s; }
+.set-row:last-child { border-bottom:none; }
+.set-row.done-row { background:rgba(48,209,88,0.04); }
+.set-num { font-family:'Syne',sans-serif; font-weight:800; font-size:0.8rem; color:var(--text2); text-align:center; }
+.set-input {
+    background:var(--bg5); border:1px solid var(--border2); border-radius:8px;
+    color:var(--text); font-size:0.92rem; font-weight:700; font-family:'Syne',sans-serif;
+    text-align:center; padding:8px 4px; width:100%; outline:none; transition:border-color 0.15s;
+}
+.set-input:focus { border-color:var(--red); }
+.set-check {
+    background:var(--bg5); border:1px solid var(--border2); border-radius:8px;
+    color:var(--text3); font-size:1rem; padding:7px 0; cursor:pointer;
+    width:100%; transition:all 0.15s; display:flex; align-items:center; justify-content:center;
+}
+.set-check.done { background:rgba(48,209,88,0.12); border-color:rgba(48,209,88,0.3); color:var(--success); }
+
+/* Load adjust */
+.load-section { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; }
+.load-label { font-family:'Syne',sans-serif; font-size:0.65rem; font-weight:800; color:var(--text2); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:10px; }
+.load-btns { display:grid; grid-template-columns:repeat(3,1fr) 2px repeat(3,1fr); gap:6px; align-items:center; }
+.load-btn {
+    background:var(--bg4); border:1px solid var(--border);
+    border-radius:8px; color:var(--text2); font-family:'Syne',sans-serif;
+    font-weight:800; font-size:0.75rem; padding:10px 4px;
+    cursor:pointer; transition:all 0.15s; text-align:center;
+}
+.load-btn.minus { color:var(--danger); border-color:rgba(255,69,58,0.2); }
+.load-btn.plus { color:var(--success); border-color:rgba(48,209,88,0.2); }
+.load-btn:active { transform:scale(0.95); }
+.load-sep { background:var(--border); height:32px; border-radius:2px; }
+
+/* History chart */
+.hist-section { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; }
+.hist-bars { display:flex; align-items:flex-end; gap:5px; height:52px; margin:10px 0 6px; }
+.hist-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.hist-bar { width:100%; background:var(--red); border-radius:3px 3px 0 0; min-height:3px; }
+.hist-val { font-family:'Syne',sans-serif; font-size:0.58rem; font-weight:800; color:var(--text2); }
+.hist-date { font-size:0.55rem; color:var(--text3); }
+.hist-last { font-size:0.75rem; color:var(--text2); }
+.hist-last strong { color:var(--text); font-family:'Syne',sans-serif; }
+
+/* Rest overlay */
+.rest-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.88); z-index:200;
+    flex-direction:column; align-items:center; justify-content:center; gap:18px;
+}
+.rest-overlay.active { display:flex; }
+.rest-ring {
+    width:140px; height:140px; border-radius:50%;
+    border:3px solid var(--red); background:var(--bg3);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    box-shadow:0 0 30px var(--red-glow);
+}
+.rest-num { font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; color:var(--red); line-height:1; }
+.rest-lbl { font-size:0.7rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dot navigation -->
+<div class="ex-nav" id="exNav">
+    {% for ex in exercises %}
+    <div class="ex-dot {% if loop.first %}active{% endif %}" id="dot{{ loop.index0 }}" onclick="goTo({{ loop.index0 }})">{{ loop.index }}</div>
+    {% endfor %}
+</div>
+
+<div class="content" style="padding-top:14px;">
+
+    {% for ex in exercises %}
+    <div class="ex-card {% if loop.first %}active{% endif %}" id="ex{{ loop.index0 }}">
+
+        <!-- Hero -->
+        <div class="ex-hero">
+            <div class="ex-group">{{ ex.muscle_group.icon }} {{ ex.muscle_group.name }}</div>
+            <div class="ex-name">{{ ex.name }}</div>
+            <div class="ex-meta">
+                <span class="badge badge-muted">{{ ex.sets }}× séries</span>
+                <span class="badge badge-muted">{{ ex.reps }} reps</span>
+                {% if ex.weight %}<span class="badge badge-red" id="curW{{ loop.index0 }}">{{ ex.weight }}kg</span>{% endif %}
+                <span class="badge badge-muted">{{ ex.rest_seconds }}s descanso</span>
+            </div>
+        </div>
+
+        <!-- Sets -->
+        <div class="sets-wrap">
+            <div class="sets-head">
+                <span>#</span><span>Kg</span><span>Reps</span><span>✓</span>
+            </div>
+            {% for s in range(ex.sets) %}
+            <div class="set-row" id="sr{{ loop.index0 }}_{{ s }}">
+                <div class="set-num">{{ s+1 }}</div>
+                <input class="set-input" type="number" step="0.5" min="0"
+                    id="w{{ loop.index0 }}_{{ s }}" value="{{ ex.weight or '' }}" placeholder="—">
+                <input class="set-input" type="text"
+                    id="r{{ loop.index0 }}_{{ s }}" value="{{ ex.reps }}" placeholder="—">
+                <button class="set-check" onclick="checkSet({{ loop.index0 }},{{ s }},{{ ex.rest_seconds }})">✓</button>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Load adjust -->
+        <div class="load-section">
+            <div class="load-label">Ajustar Carga</div>
+            <div class="load-btns">
+                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-10)">−10%</button>
+                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-5)">−5%</button>
+                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-1)">−1%</button>
+                <div class="load-sep"></div>
+                <button class="load-btn plus" onclick="adj({{ loop.index0 }},1)">+1%</button>
+                <button class="load-btn plus" onclick="adj({{ loop.index0 }},5)">+5%</button>
+                <button class="load-btn plus" onclick="adj({{ loop.index0 }},10)">+10%</button>
+            </div>
+        </div>
+
+        <!-- History -->
+        {% if ex.history %}
+        <div class="hist-section">
+            <div class="load-label">Histórico de Carga</div>
+            {% set max_w = namespace(val=0.1) %}
+            {% for h in ex.history %}{% if h.weight_kg and h.weight_kg > max_w.val %}{% set max_w.val = h.weight_kg %}{% endif %}{% endfor %}
+            <div class="hist-bars">
+                {% for h in ex.history %}
+                <div class="hist-bar-col">
+                    <div class="hist-bar" style="height:{{ ((h.weight_kg or 0)/max_w.val*48)|int }}px;"></div>
+                    <div class="hist-val">{{ h.weight_kg or '—' }}</div>
+                    <div class="hist-date">{{ h.date.strftime('%d/%m') }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="hist-last">Última: <strong>{{ ex.history[-1].weight_kg or '—' }}kg × {{ ex.history[-1].reps_done or '—' }} reps</strong></div>
+        </div>
+        {% endif %}
+
+        <!-- Nav -->
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+            {% if not loop.first %}
+            <button onclick="goTo({{ loop.index0-1 }})" class="btn btn-ghost" style="flex:1;">← Anterior</button>
+            {% endif %}
+            {% if not loop.last %}
+            <button onclick="goTo({{ loop.index0+1 }})" class="btn btn-red" style="flex:1;">Próximo →</button>
+            {% else %}
+            <button onclick="finish()" class="btn btn-success" style="flex:1; font-size:0.95rem;">🏁 FINALIZAR</button>
+            {% endif %}
+        </div>
+
+    </div>
+    {% endfor %}
+
+    <!-- Submit form -->
+    <form method="POST" action="{{ url_for('history.save_live') }}" id="finishForm" style="display:none;">
+        <input type="hidden" name="plan_id" value="{{ plan_id or '' }}">
+        <input type="hidden" name="duration" id="finalDuration">
+        <input type="hidden" name="exercise_data" id="exerciseData">
+        <input type="hidden" name="exercise_ids_json" value="{{ exercise_ids_json|safe }}">
+    </form>
+</div>
+
+<!-- Rest overlay -->
+<div class="rest-overlay" id="restOverlay">
+    <div class="rest-ring">
+        <div class="rest-num" id="restNum">60</div>
+        <div class="rest-lbl">Descanso</div>
+    </div>
+    <p style="color:var(--text2); font-size:0.82rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Prepare-se para a próxima série</p>
+    <button onclick="skipRest()" class="btn btn-ghost">Pular</button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const exerciseIds = {{ exercise_ids_json|safe }};
+let current = 0;
+let t0 = Date.now();
+let restInt = null;
+setInterval(() => {
+    const s = Math.floor((Date.now()-t0)/1000);
+    document.getElementById('timer').textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}, 1000);
+
+function goTo(i) {
+    document.querySelectorAll('.ex-card').forEach(c=>c.classList.remove('active'));
+    document.querySelectorAll('.ex-dot').forEach(d=>d.classList.remove('active'));
+    document.getElementById('ex'+i).classList.add('active');
+    document.getElementById('dot'+i).classList.add('active');
+    current = i;
+    document.getElementById('dot'+i).scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+}
+
+function checkSet(ei, si, rest) {
+    const btn = document.querySelector('#sr'+ei+'_'+si+' .set-check');
+    const row = document.getElementById('sr'+ei+'_'+si);
+    const done = btn.classList.toggle('done');
+    row.classList.toggle('done-row', done);
+    // Mark dot done if all sets checked
+    const all = document.querySelectorAll('[id^="sr'+ei+'_"]');
+    if ([...all].every(r=>r.querySelector('.set-check').classList.contains('done'))) {
+        const dot = document.getElementById('dot'+ei);
+        dot.classList.remove('active'); dot.classList.add('done'); dot.textContent='✓';
+    }
+    if (done && rest > 0) startRest(rest);
+}
+
+function startRest(sec) {
+    let r = sec;
+    document.getElementById('restNum').textContent = r;
+    document.getElementById('restOverlay').classList.add('active');
+    if (restInt) clearInterval(restInt);
+    restInt = setInterval(()=>{ r--; document.getElementById('restNum').textContent=r; if(r<=0) skipRest(); },1000);
+}
+function skipRest() { clearInterval(restInt); document.getElementById('restOverlay').classList.remove('active'); }
+
+function adj(ei, pct) {
+    const rows = document.querySelectorAll('[id^="sr'+ei+'_"]');
+    rows.forEach((_,si)=>{
+        const inp = document.getElementById('w'+ei+'_'+si);
+        const cur = parseFloat(inp.value)||0;
+        if (cur===0) return;
+        inp.value = (Math.round(cur*(1+pct/100)*2)/2).toFixed(1);
+    });
+}
+
+function finish() {
+    if (!confirm('Finalizar o treino?')) return;
+    const mins = Math.floor((Date.now()-t0)/1000/60);
+    document.getElementById('finalDuration').value = mins;
+    const data = [];
+    document.querySelectorAll('.ex-card').forEach((card,ei)=>{
+        const sets = [];
+        document.querySelectorAll('[id^="sr'+ei+'_"]').forEach((_,si)=>{
+            const row = document.getElementById('sr'+ei+'_'+si);
+            sets.push({
+                weight: document.getElementById('w'+ei+'_'+si)?.value||'',
+                reps: document.getElementById('r'+ei+'_'+si)?.value||'',
+                done: row?.querySelector('.set-check')?.classList.contains('done')||false
+            });
+        });
+        data.push({ex_idx:ei,sets});
+    });
+    document.getElementById('exerciseData').value = JSON.stringify(data);
+    document.getElementById('finishForm').submit();
+}
+</script>
+{% endblock %}

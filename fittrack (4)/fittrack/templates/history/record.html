@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% block title %}Registrar Treino{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <a href="{{ url_for('history.index') }}" class="topbar-back">←</a>
+    <h1>Registrar Treino</h1>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.exercise-block {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1.5px solid var(--border);
+}
+.exercise-block h4 { font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:700; margin-bottom:10px; }
+.ex-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.ex-grid input { padding:10px 8px; border:1.5px solid var(--border); border-radius:8px; font-size:0.85rem; text-align:center; outline:none; width:100%; }
+.ex-grid input:focus { border-color:var(--red); }
+.ex-grid label { font-size:0.7rem; color:#888; font-weight:700; font-family:'Syne',sans-serif; display:block; text-align:center; margin-bottom:3px; }
+.remove-btn { background:none; border:none; color:#ccc; font-size:1.1rem; cursor:pointer; float:right; margin-top:-2px; }
+.remove-btn:hover { color:#E74C3C; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <form method="POST" id="recordForm">
+        <div class="card" style="margin-bottom:16px;">
+            <div class="form-group">
+                <label class="form-label">Data do treino</label>
+                <input type="date" name="date" class="form-control" value="{{ today }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Plano utilizado (opcional)</label>
+                <select name="plan_id" class="form-control" id="planSelect" onchange="loadPlanExercises()">
+                    <option value="">Treino livre</option>
+                    {% for plan in plans %}
+                    <option value="{{ plan.id }}" {% if request.args.get('plan') == plan.id|string %}selected{% endif %}>
+                        {{ plan.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Duração (minutos)</label>
+                <input type="number" name="duration" class="form-control" placeholder="Ex: 60" min="1" max="300">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Observações</label>
+                <textarea name="notes" class="form-control" rows="2" placeholder="Como foi o treino?"></textarea>
+            </div>
+        </div>
+
+        <!-- Add exercises -->
+        <div class="section-header" style="margin-bottom:10px;">
+            <span class="section-title">Exercícios</span>
+        </div>
+
+        <div class="card" style="margin-bottom:12px;">
+            <div class="form-group" style="margin-bottom:8px;">
+                <label class="form-label">Grupo muscular</label>
+                <select id="groupSel" class="form-control" onchange="filterExercises()">
+                    <option value="">Todos</option>
+                    {% for group in groups %}
+                    <option value="{{ group.id }}">{{ group.icon }} {{ group.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+                <label class="form-label">Exercício</label>
+                <select id="exSel" class="form-control">
+                    {% for group in groups %}
+                        {% for ex in group.exercises %}
+                        <option value="{{ ex.id }}" data-name="{{ ex.name }}" data-group="{{ group.id }}">{{ ex.name }}</option>
+                        {% endfor %}
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="button" onclick="addExercise()" class="btn btn-outline btn-block btn-sm">+ Adicionar exercício</button>
+        </div>
+
+        <div id="exerciseList"></div>
+
+        <button type="submit" class="btn btn-coral btn-block">💾 Salvar Registro</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const planExercises = {
+    {% for plan in plans %}
+    "{{ plan.id }}": [
+        {% for pe in plan.plan_exercises %}
+        { id: "{{ pe.exercise_id }}", name: "{{ pe.exercise.name }}", sets: {{ pe.sets }}, reps: "{{ pe.reps }}" },
+        {% endfor %}
+    ],
+    {% endfor %}
+};
+
+let addedIds = [];
+
+function filterExercises() {
+    const gid = document.getElementById('groupSel').value;
+    const sel = document.getElementById('exSel');
+    Array.from(sel.options).forEach(opt => {
+        opt.style.display = (!gid || opt.dataset.group === gid) ? '' : 'none';
+    });
+    // Select first visible
+    const first = Array.from(sel.options).find(o => o.style.display !== 'none');
+    if (first) sel.value = first.value;
+}
+
+function addExercise(id=null, name=null, sets=3, reps='') {
+    const sel = document.getElementById('exSel');
+    const exId = id || sel.value;
+    const exName = name || sel.options[sel.selectedIndex].dataset.name;
+    if (!exId) return;
+
+    const div = document.createElement('div');
+    div.className = 'exercise-block';
+    div.id = 'ex-' + exId + '-' + Date.now();
+    div.innerHTML = `
+        <h4>💪 ${exName}
+            <button type="button" class="remove-btn" onclick="this.closest('.exercise-block').remove()">✕</button>
+        </h4>
+        <input type="hidden" name="exercise_ids" value="${exId}">
+        <div class="ex-grid">
+            <div>
+                <label>Séries</label>
+                <input type="number" name="sets_done" value="${sets}" min="0" max="30" placeholder="Séries">
+            </div>
+            <div>
+                <label>Reps</label>
+                <input type="text" name="reps_done" value="${reps}" placeholder="12 ou 10-12">
+            </div>
+            <div>
+                <label>Carga (kg)</label>
+                <input type="number" name="weight_kg" step="0.5" min="0" placeholder="0">
+            </div>
+        </div>
+        <input type="text" name="ex_notes" class="form-control" style="margin-top:8px; font-size:0.85rem; padding:8px 10px;" placeholder="Obs. deste exercício (opcional)">
+    `;
+    document.getElementById('exerciseList').appendChild(div);
+}
+
+function loadPlanExercises() {
+    const planId = document.getElementById('planSelect').value;
+    document.getElementById('exerciseList').innerHTML = '';
+    if (planId && planExercises[planId]) {
+        planExercises[planId].forEach(ex => {
+            addExercise(ex.id, ex.name, ex.sets, ex.reps);
+        });
+    }
+}
+
+// Auto-load if plan pre-selected
+window.onload = function() {
+    const planId = document.getElementById('planSelect').value;
+    if (planId) loadPlanExercises();
+};
+</script>
+{% endblock %}
