@@ -1,78 +1,48 @@
 {% extends 'base.html' %}
 {% block title %}Planos{% endblock %}
-
 {% block topbar %}
 <div class="topbar">
-    <h1>Meus Planos</h1>
+    <h1>MEUS PLANOS</h1>
     <div class="topbar-right">
         <a href="{{ url_for('workouts.import_pdf') }}" class="topbar-btn">📄 PDF</a>
-        <a href="{{ url_for('workouts.new') }}" class="topbar-btn">+ Novo</a>
+        <a href="{{ url_for('workouts.new') }}" class="topbar-btn topbar-btn-red">+ Novo</a>
     </div>
 </div>
 {% endblock %}
-
 {% block content %}
 <div class="content">
-
-    <!-- Import PDF banner (shown when no plans exist) -->
     {% if not plans %}
-    <div class="card" style="background: linear-gradient(135deg, var(--coral) 0%, #C44E2A 100%); border:none; margin-bottom:16px; text-align:center; padding:24px;">
-        <div style="font-size:2.5rem; margin-bottom:8px;">🤖</div>
-        <h3 style="font-family:'Syne',sans-serif; color:white; font-size:1.1rem; font-weight:800; margin-bottom:6px;">
-            Importe sua planilha de treino
-        </h3>
-        <p style="color:rgba(255,255,255,0.85); font-size:0.88rem; margin-bottom:16px; line-height:1.5;">
-            Envie o PDF do seu personal e a IA cria todos os planos automaticamente
-        </p>
-        <a href="{{ url_for('workouts.import_pdf') }}" class="btn" style="background:white; color:var(--coral); font-family:'Syne',sans-serif; font-weight:800; border-radius:12px; padding:12px 24px;">
-            📄 Importar PDF
-        </a>
+    <div class="card" style="background:var(--red); border:none; text-align:center; padding:24px; margin-bottom:16px;">
+        <div style="font-size:2rem; margin-bottom:8px;">🤖</div>
+        <div style="font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; color:white; margin-bottom:6px;">Importe sua planilha</div>
+        <p style="color:rgba(255,255,255,0.75); font-size:0.82rem; margin-bottom:14px; line-height:1.5;">Envie o PDF do seu personal e a IA cria os planos automaticamente</p>
+        <a href="{{ url_for('workouts.import_pdf') }}" class="btn" style="background:white; color:var(--red); font-weight:800; border-radius:10px; padding:10px 20px;">📄 Importar PDF</a>
     </div>
-
-    <div style="text-align:center; margin:16px 0; color:#aaa; font-size:0.85rem; font-weight:600;">— ou crie manualmente —</div>
-
-    <a href="{{ url_for('workouts.new') }}" class="btn btn-outline btn-block" style="margin-bottom:20px;">
-        + Criar plano manualmente
-    </a>
-
+    <div class="sep-label">ou crie manualmente</div>
+    <a href="{{ url_for('workouts.new') }}" class="btn btn-outline btn-block" style="margin-bottom:20px;">+ Criar plano</a>
     {% else %}
-
-    <!-- Plans list -->
     {% for plan in plans %}
-    <div class="card" style="margin-bottom:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-            <div>
-                <h3 style="font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:800;">{{ plan.name }}</h3>
-                <div style="font-size:0.8rem; color:#888; margin-top:2px;">
-                    {{ plan.plan_exercises|length }} exercício{% if plan.plan_exercises|length != 1 %}s{% endif %}
-                    · Criado em {{ plan.created_at.strftime('%d/%m/%Y') }}
-                </div>
-            </div>
+    <div class="card" style="margin-bottom:10px;">
+        <div style="margin-bottom:10px;">
+            <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:1rem;">{{ plan.name }}</div>
+            <div style="font-size:0.73rem; color:var(--text2); margin-top:2px;">{{ plan.plan_exercises|length }} exercícios · {{ plan.created_at.strftime('%d/%m/%Y') }}</div>
         </div>
-        {% if plan.description %}
-        <p style="font-size:0.88rem; color:#666; margin-bottom:10px; line-height:1.5;">{{ plan.description }}</p>
-        {% endif %}
+        {% if plan.description %}<p style="font-size:0.84rem; color:var(--text2); margin-bottom:10px; line-height:1.5;">{{ plan.description }}</p>{% endif %}
         {% if plan.plan_exercises %}
-        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
-            {% for pe in plan.plan_exercises[:4] %}
-            <span class="tag">{{ pe.exercise.name }}</span>
-            {% endfor %}
-            {% if plan.plan_exercises|length > 4 %}
-            <span class="tag" style="background:#eee; color:#888;">+{{ plan.plan_exercises|length - 4 }}</span>
-            {% endif %}
+        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px;">
+            {% for pe in plan.plan_exercises[:4] %}<span class="tag">{{ pe.exercise.name }}</span>{% endfor %}
+            {% if plan.plan_exercises|length > 4 %}<span class="tag" style="color:var(--text3);">+{{ plan.plan_exercises|length-4 }}</span>{% endif %}
         </div>
         {% endif %}
         <div style="display:flex; gap:8px;">
-            <a href="{{ url_for('workouts.detail', plan_id=plan.id) }}" class="btn btn-coral btn-sm" style="flex:1; justify-content:center;">Ver plano</a>
-            <a href="{{ url_for('history.record') }}?plan={{ plan.id }}" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;">Treinar</a>
-            <form method="POST" action="{{ url_for('workouts.delete', plan_id=plan.id) }}" onsubmit="return confirm('Remover este plano?')">
-                <button type="submit" class="btn btn-sm" style="background:#FEE; color:#E74C3C; padding:8px 10px;">🗑</button>
+            <a href="{{ url_for('workouts.detail', plan_id=plan.id) }}" class="btn btn-ghost btn-sm" style="flex:1; justify-content:center;">Ver plano</a>
+            <a href="/live/{{ plan.id }}" class="btn btn-red btn-sm" style="flex:1; justify-content:center;">▶ Treinar</a>
+            <form method="POST" action="{{ url_for('workouts.delete', plan_id=plan.id) }}" onsubmit="return confirm('Remover?')">
+                <button type="submit" class="btn btn-sm btn-danger" style="padding:8px 10px;">🗑</button>
             </form>
         </div>
     </div>
     {% endfor %}
-
     {% endif %}
 </div>
 {% endblock %}
- 

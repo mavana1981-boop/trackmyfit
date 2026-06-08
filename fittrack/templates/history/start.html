@@ -11,64 +11,60 @@
 {% block extra_css %}
 <style>
 .mode-card {
-    background: var(--bg3); border: 1.5px solid var(--border);
-    border-radius: 18px; padding: 20px; margin-bottom: 12px;
-    text-decoration: none; display: flex; align-items: center; gap: 16px;
-    transition: all 0.15s; cursor: pointer;
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:16px; padding:18px; margin-bottom:10px;
+    display:flex; align-items:center; gap:16px; cursor:pointer;
+    transition:all 0.15s; text-decoration:none; color:var(--text);
 }
-.mode-card:active { transform: scale(0.98); }
-.mode-card.selected, .mode-card:hover { border-color: var(--accent); background: rgba(255,94,44,0.05); }
-.mode-icon { font-size: 2.4rem; flex-shrink: 0; }
-.mode-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; margin-bottom: 3px; }
-.mode-sub { font-size: 0.8rem; color: var(--text2); line-height: 1.4; }
+.mode-card:active { transform:scale(0.98); }
+.mode-card.active { border-color:var(--red); background:var(--red-glow); }
+.mode-icon { font-size:2rem; flex-shrink:0; width:48px; height:48px; background:var(--bg4); border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
+.mode-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; margin-bottom:3px; }
+.mode-sub { font-size:0.76rem; color:var(--text2); line-height:1.4; }
 
-.plan-option {
-    background: var(--bg4); border: 1.5px solid var(--border);
-    border-radius: 12px; padding: 14px 16px; margin-bottom: 8px;
-    display: flex; align-items: center; gap: 12px; cursor: pointer;
-    transition: all 0.15s;
+.plan-item {
+    background:var(--bg4); border:1px solid var(--border);
+    border-radius:12px; padding:14px 16px; margin-bottom:8px;
+    display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.15s;
 }
-.plan-option:active { transform: scale(0.98); }
-.plan-option.selected { border-color: var(--accent); background: rgba(255,94,44,0.08); }
-.plan-option input[type=radio] { accent-color: var(--accent); width: 18px; height: 18px; }
+.plan-item:active { transform:scale(0.98); }
+.plan-item.selected { border-color:var(--red); background:var(--red-glow); }
+.plan-item input[type=radio] { accent-color:var(--red); width:16px; height:16px; flex-shrink:0; }
 
-.group-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.group-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .group-btn {
-    background: var(--bg4); border: 1.5px solid var(--border);
-    border-radius: 12px; padding: 14px 10px;
-    text-align: center; cursor: pointer; transition: all 0.15s;
-    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem;
-    color: var(--text); display: flex; flex-direction: column; gap: 6px;
-    align-items: center;
+    background:var(--bg4); border:1px solid var(--border);
+    border-radius:12px; padding:16px 12px; text-align:center;
+    cursor:pointer; transition:all 0.15s;
+    font-family:'Syne',sans-serif; font-weight:800; font-size:0.8rem;
+    color:var(--text2); display:flex; flex-direction:column;
+    gap:6px; align-items:center;
 }
-.group-btn:active { transform: scale(0.96); }
-.group-btn.selected { border-color: var(--accent); background: rgba(255,94,44,0.08); color: var(--accent); }
-.group-btn .g-icon { font-size: 1.6rem; }
+.group-btn:active { transform:scale(0.96); }
+.group-btn.selected { border-color:var(--red); background:var(--red-glow); color:var(--red); }
+.group-btn .g-icon { font-size:1.6rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content">
 
-    <!-- Mode selection -->
     <div class="section-header" style="margin-bottom:12px;">
         <span class="section-title">Como quer treinar?</span>
     </div>
 
-    <div id="modeSection">
-        <div class="mode-card" onclick="selectMode('plan')" id="modePlan">
-            <span class="mode-icon">📋</span>
-            <div>
-                <div class="mode-title">Treino com Plano</div>
-                <div class="mode-sub">Selecione um dos seus planos pré-formulados com exercícios e séries definidas</div>
-            </div>
+    <div class="mode-card" onclick="selectMode('plan')" id="modePlan">
+        <div class="mode-icon">📋</div>
+        <div>
+            <div class="mode-title">Com Plano</div>
+            <div class="mode-sub">Selecione um plano pré-formulado com séries e cargas definidas</div>
         </div>
-        <div class="mode-card" onclick="selectMode('free')" id="modeFree">
-            <span class="mode-icon">⚡</span>
-            <div>
-                <div class="mode-title">Treino Avulso</div>
-                <div class="mode-sub">Escolha os grupos musculares e monte seu treino na hora</div>
-            </div>
+    </div>
+    <div class="mode-card" onclick="selectMode('free')" id="modeFree">
+        <div class="mode-icon">⚡</div>
+        <div>
+            <div class="mode-title">Treino Avulso</div>
+            <div class="mode-sub">Escolha grupos musculares e monte na hora</div>
         </div>
     </div>
 
@@ -79,52 +75,45 @@
         </div>
         {% if plans %}
             {% for plan in plans %}
-            <label class="plan-option" id="planOpt{{ plan.id }}">
+            <label class="plan-item" id="planOpt{{ plan.id }}">
                 <input type="radio" name="plan_choice" value="{{ plan.id }}" onchange="selectPlan({{ plan.id }})">
                 <div style="flex:1;">
-                    <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:0.92rem;">{{ plan.name }}</div>
-                    <div style="font-size:0.75rem; color:var(--text2); margin-top:2px;">
-                        {{ plan.plan_exercises|length }} exercícios
-                    </div>
+                    <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:0.9rem;">{{ plan.name }}</div>
+                    <div style="font-size:0.73rem; color:var(--text2); margin-top:2px;">{{ plan.plan_exercises|length }} exercícios</div>
                 </div>
                 <span style="color:var(--text3);">›</span>
             </label>
             {% endfor %}
-            <div style="margin-top:16px;">
-                <button onclick="startWithPlan()" id="btnStartPlan" disabled
-                    class="btn btn-accent btn-block btn-lg">
-                    ▶ Iniciar Treino
-                </button>
-            </div>
+            <button onclick="startWithPlan()" id="btnStartPlan" disabled
+                class="btn btn-red btn-block btn-lg" style="margin-top:16px;">
+                ▶ INICIAR TREINO
+            </button>
         {% else %}
             <div class="empty-state" style="padding:24px 0;">
                 <div class="empty-icon">📋</div>
                 <div class="empty-title">Nenhum plano criado</div>
-                <p style="font-size:0.82rem; margin-top:4px; margin-bottom:16px;">Crie ou importe um plano primeiro</p>
-                <a href="{{ url_for('workouts.index') }}" class="btn btn-accent">Criar Plano</a>
+                <a href="{{ url_for('workouts.index') }}" class="btn btn-red" style="margin-top:12px;">Criar Plano</a>
             </div>
         {% endif %}
     </div>
 
-    <!-- Free workout — muscle group selection -->
+    <!-- Free workout -->
     <div id="freeSection" style="display:none; margin-top:20px;">
         <div class="section-header" style="margin-bottom:10px;">
             <span class="section-title">Grupos musculares</span>
         </div>
         <div class="group-grid" id="groupGrid">
             {% for group in groups %}
-            <div class="group-btn" onclick="toggleGroup({{ group.id }}, this)" data-id="{{ group.id }}">
+            <div class="group-btn" onclick="toggleGroup({{ group.id }}, this)">
                 <span class="g-icon">{{ group.icon }}</span>
                 {{ group.name }}
             </div>
             {% endfor %}
         </div>
-        <div style="margin-top:16px;">
-            <button onclick="startFree()" id="btnStartFree" disabled
-                class="btn btn-accent btn-block btn-lg">
-                ▶ Iniciar Treino Avulso
-            </button>
-        </div>
+        <button onclick="startFree()" id="btnStartFree" disabled
+            class="btn btn-red btn-block btn-lg" style="margin-top:16px;">
+            ▶ INICIAR TREINO AVULSO
+        </button>
     </div>
 
 </div>
@@ -138,39 +127,26 @@ let selectedGroups = [];
 function selectMode(mode) {
     document.getElementById('planSection').style.display = mode === 'plan' ? 'block' : 'none';
     document.getElementById('freeSection').style.display = mode === 'free' ? 'block' : 'none';
-    document.getElementById('modePlan').classList.toggle('selected', mode === 'plan');
-    document.getElementById('modeFree').classList.toggle('selected', mode === 'free');
+    document.getElementById('modePlan').classList.toggle('active', mode === 'plan');
+    document.getElementById('modeFree').classList.toggle('active', mode === 'free');
 }
-
 function selectPlan(id) {
     selectedPlanId = id;
-    document.querySelectorAll('.plan-option').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.plan-item').forEach(el => el.classList.remove('selected'));
     document.getElementById('planOpt' + id).classList.add('selected');
     document.getElementById('btnStartPlan').disabled = false;
 }
-
 function startWithPlan() {
-    if (selectedPlanId) {
-        window.location.href = '/live/' + selectedPlanId;
-    }
+    if (selectedPlanId) window.location.href = '/live/' + selectedPlanId;
 }
-
 function toggleGroup(id, el) {
     const idx = selectedGroups.indexOf(id);
-    if (idx === -1) {
-        selectedGroups.push(id);
-        el.classList.add('selected');
-    } else {
-        selectedGroups.splice(idx, 1);
-        el.classList.remove('selected');
-    }
+    if (idx === -1) { selectedGroups.push(id); el.classList.add('selected'); }
+    else { selectedGroups.splice(idx,1); el.classList.remove('selected'); }
     document.getElementById('btnStartFree').disabled = selectedGroups.length === 0;
 }
-
 function startFree() {
-    if (selectedGroups.length > 0) {
-        window.location.href = '/live/free?groups=' + selectedGroups.join(',');
-    }
+    if (selectedGroups.length > 0) window.location.href = '/live/free?groups=' + selectedGroups.join(',');
 }
 </script>
 {% endblock %}

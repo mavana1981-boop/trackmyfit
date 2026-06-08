@@ -1,11 +1,11 @@
-l{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block title %}FitTrack{% endblock %}
 
 {% block topbar %}
 <div class="topbar">
-    <div>
-        <div style="font-size:0.72rem; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Bem-vindo de volta</div>
-        <h1>{{ current_user.name.split()[0] }} 👋</h1>
+    <div style="flex:1;">
+        <div style="font-size:0.65rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">Bem-vindo de volta</div>
+        <h1 style="font-size:1.2rem;">{{ current_user.name.split()[0] }}</h1>
     </div>
     <div class="topbar-right">
         <a href="{{ url_for('auth.logout') }}" class="topbar-btn">Sair</a>
@@ -15,100 +15,93 @@ l{% extends 'base.html' %}
 
 {% block extra_css %}
 <style>
-.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-.action-card {
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 16px; padding: 18px 14px;
-    text-decoration: none; display: flex; flex-direction: column;
-    gap: 10px; transition: all 0.15s; cursor: pointer;
+.action-btn {
+    display:flex; align-items:center; gap:14px;
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:14px; padding:16px 18px;
+    text-decoration:none; color:var(--text);
+    transition:all 0.15s; margin-bottom:10px;
 }
-.action-card:active { transform: scale(0.97); }
-.action-card.primary { background: var(--accent); border-color: var(--accent); }
-.action-card.primary .action-label { color: white; }
-.action-card.primary .action-sub { color: rgba(255,255,255,0.7); }
-.action-icon { font-size: 1.8rem; }
-.action-label { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.92rem; color: var(--text); }
-.action-sub { font-size: 0.72rem; color: var(--text2); font-weight: 500; margin-top: -6px; }
-.action-card-wide {
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 16px; padding: 16px 18px;
-    text-decoration: none; display: flex; align-items: center; gap: 14px;
-    transition: all 0.15s; margin-bottom: 10px;
-}
-.action-card-wide:active { transform: scale(0.98); }
+.action-btn:active { transform:scale(0.98); background:var(--bg4); }
+.action-btn.primary { background:var(--red); border-color:var(--red); }
+.action-btn.primary .a-sub { color:rgba(255,255,255,0.65); }
+.a-icon { font-size:1.8rem; flex-shrink:0; }
+.a-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
+.a-sub { font-size:0.75rem; color:var(--text2); margin-top:2px; }
+.a-arrow { margin-left:auto; color:var(--text3); font-size:1.1rem; }
 
-.streak-bar { display: flex; gap: 6px; margin-top: 12px; }
-.streak-day {
-    flex: 1; height: 36px; border-radius: 6px;
-    background: var(--bg4); border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.6rem; font-weight: 700; color: var(--text3);
-    font-family: 'Syne', sans-serif; flex-direction: column; gap: 2px;
+.week-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:10px; }
+.week-day {
+    aspect-ratio:1; border-radius:8px;
+    background:var(--bg4); border:1px solid var(--border);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px;
 }
-.streak-day.done { background: var(--accent); border-color: var(--accent); color: white; }
-.streak-day.today { border-color: var(--accent); color: var(--accent); }
+.week-day.done { background:var(--red); border-color:var(--red); }
+.week-day.today { border-color:var(--red); }
+.wd-letter { font-family:'Syne',sans-serif; font-size:0.55rem; font-weight:800; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; }
+.week-day.done .wd-letter { color:rgba(255,255,255,0.7); }
+.week-day.today .wd-letter { color:var(--red); }
+.wd-check { font-size:0.7rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content">
 
-    <!-- Stats -->
+    <!-- Stats row -->
     <div class="stats-grid" style="margin-bottom:20px;">
         <div class="stat-card">
-            <div class="stat-number">{{ weekly_sessions }}</div>
+            <div class="stat-number" style="color:var(--red);">{{ weekly_sessions }}</div>
             <div class="stat-label">Esta semana</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{{ total_sessions }}</div>
-            <div class="stat-label">Total de treinos</div>
+            <div class="stat-number" style="color:var(--text);">{{ total_sessions }}</div>
+            <div class="stat-label">Total treinos</div>
         </div>
     </div>
 
-    <!-- Main actions -->
-    <div class="section-header"><span class="section-title">O que vamos fazer?</span></div>
+    <!-- Actions -->
+    <div class="section-header"><span class="section-title">Ações</span></div>
 
-    <div class="action-grid" style="margin-top:10px;">
-        <a href="{{ url_for('history.start') }}" class="action-card primary" style="grid-column: span 2;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span style="font-size:2.2rem;">▶️</span>
-                <div>
-                    <div class="action-label" style="font-size:1.05rem;">Começar Treino</div>
-                    <div class="action-sub">Plano ou treino avulso</div>
-                </div>
+    <a href="{{ url_for('history.start') }}" class="action-btn primary">
+        <span class="a-icon">▶️</span>
+        <div>
+            <div class="a-title">Começar Treino</div>
+            <div class="a-sub">Plano ou avulso por grupo muscular</div>
+        </div>
+        <span class="a-arrow">›</span>
+    </a>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+        <a href="{{ url_for('history.record') }}" class="action-btn" style="margin-bottom:0; flex-direction:column; align-items:flex-start; gap:8px; padding:14px;">
+            <span style="font-size:1.5rem;">✏️</span>
+            <div>
+                <div class="a-title" style="font-size:0.85rem;">Registrar</div>
+                <div class="a-sub" style="font-size:0.7rem;">Treino já feito</div>
             </div>
         </a>
-        <a href="{{ url_for('history.record') }}" class="action-card">
-            <span class="action-icon">✏️</span>
+        <a href="{{ url_for('workouts.index') }}" class="action-btn" style="margin-bottom:0; flex-direction:column; align-items:flex-start; gap:8px; padding:14px;">
+            <span style="font-size:1.5rem;">📋</span>
             <div>
-                <div class="action-label">Registrar</div>
-                <div class="action-sub">Treino já feito</div>
-            </div>
-        </a>
-        <a href="{{ url_for('workouts.index') }}" class="action-card">
-            <span class="action-icon">📋</span>
-            <div>
-                <div class="action-label">Meus Planos</div>
-                <div class="action-sub">Ver e criar</div>
+                <div class="a-title" style="font-size:0.85rem;">Meus Planos</div>
+                <div class="a-sub" style="font-size:0.7rem;">Ver e criar</div>
             </div>
         </a>
     </div>
 
     <!-- Week streak -->
+    <div class="section-header"><span class="section-title">Semana atual</span></div>
     <div class="card" style="margin-bottom:20px;">
-        <div class="section-title" style="margin-bottom:4px;">Semana atual</div>
-        <div style="font-size:0.78rem; color:var(--text2);">{{ weekly_sessions }} treino{% if weekly_sessions != 1 %}s{% endif %} esta semana</div>
-        <div class="streak-bar">
-            {% set days = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
+        <div class="week-grid">
+            {% set days = ['S','T','Q','Q','S','S','D'] %}
             {% set today_wd = today.weekday() %}
-            {% set session_days = sessions_last_30 | map(attribute='date') | list %}
             {% for i in range(7) %}
-                {% set cls = 'today' if i == today_wd else '' %}
-                {% set done = false %}
-                {% for s in sessions_last_30 %}{% if s.date.weekday() == i %}{% set done = true %}{% endif %}{% endfor %}
-                <div class="streak-day {{ 'done' if done else cls }}">
-                    <span>{{ days[i] }}</span>
-                    <span>{% if done %}✓{% elif i == today_wd %}•{% endif %}</span>
+                {% set done = namespace(val=false) %}
+                {% for s in sessions_last_30 %}{% if s.date.weekday() == i %}{% set done.val = true %}{% endif %}{% endfor %}
+                <div class="week-day {{ 'done' if done.val else ('today' if i == today_wd else '') }}">
+                    <span class="wd-letter">{{ days[i] }}</span>
+                    <span class="wd-check">{% if done.val %}✓{% elif i == today_wd %}·{% endif %}</span>
                 </div>
             {% endfor %}
         </div>
@@ -117,17 +110,16 @@ l{% extends 'base.html' %}
     <!-- Recent sessions -->
     <div class="section-header">
         <span class="section-title">Últimos treinos</span>
-        <a href="{{ url_for('history.index') }}" class="section-link">Ver todos →</a>
+        <a href="{{ url_for('history.index') }}" class="section-link">Ver todos</a>
     </div>
-    <div class="card" style="padding: 0 16px;">
+    <div class="card" style="padding:0 16px;">
         {% if recent_sessions %}
             {% for s in recent_sessions %}
             <a href="{{ url_for('history.detail', session_id=s.id) }}" class="list-item">
-                <div class="list-icon">📅</div>
+                <div class="list-icon" style="background:var(--red-glow); border-color:rgba(232,25,44,0.2);">📅</div>
                 <div class="list-item-body">
-                    <div class="list-item-name">
-                        {{ s.date.strftime('%d/%m/%Y') }}
-                        {% if s.date == today %}<span class="badge badge-accent" style="margin-left:6px; font-size:0.62rem;">Hoje</span>{% endif %}
+                    <div class="list-item-name">{{ s.date.strftime('%d/%m/%Y') }}
+                        {% if s.date == today %}<span class="badge badge-red" style="margin-left:6px; font-size:0.6rem;">HOJE</span>{% endif %}
                     </div>
                     <div class="list-item-sub">
                         {% if s.plan %}{{ s.plan.name }} · {% endif %}
@@ -139,10 +131,9 @@ l{% extends 'base.html' %}
             </a>
             {% endfor %}
         {% else %}
-            <div class="empty-state" style="padding:32px 0;">
+            <div class="empty-state" style="padding:28px 0;">
                 <div class="empty-icon">💪</div>
                 <div class="empty-title">Nenhum treino ainda</div>
-                <p style="font-size:0.82rem; margin-top:4px;">Comece seu primeiro treino!</p>
             </div>
         {% endif %}
     </div>
