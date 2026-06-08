@@ -4,7 +4,7 @@ from app import db
 from models import WorkoutPlan, PlanExercise, Exercise, MuscleGroup
 import os
 import base64
-import json
+import json 
 import requests as http_requests
 
 workouts_bp = Blueprint('workouts', __name__)
