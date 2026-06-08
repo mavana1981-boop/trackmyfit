@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}FitTrack — Início{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <div>
+        <h1>Olá, {{ current_user.name.split()[0] }} 👋</h1>
+    </div>
+    <div class="topbar-right">
+        <a href="{{ url_for('auth.logout') }}" class="topbar-btn">Sair</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <!-- Stats -->
+    <div class="stats-grid" style="margin-bottom:20px;">
+        <div class="stat-card">
+            <div class="stat-number">{{ weekly_sessions }}</div>
+            <div class="stat-label">Treinos esta semana</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_sessions }}</div>
+            <div class="stat-label">Total de treinos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ plans_count }}</div>
+            <div class="stat-label">Planos criados</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">
+                {% if sessions_last_30 %}
+                    {{ "%.0f"|format(sessions_last_30|length / 4.3) }}
+                {% else %}0{% endif %}
+            </div>
+            <div class="stat-label">Média/semana (30d)</div>
+        </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="section-header">
+        <span class="section-title">Ações rápidas</span>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px;">
+        <a href="{{ url_for('history.record') }}" class="btn btn-coral" style="border-radius:14px; padding:14px 10px; font-size:0.88rem; text-align:center; display:block; text-decoration:none;">
+            ➕ Registrar Treino
+        </a>
+        <a href="{{ url_for('workouts.new') }}" class="btn btn-outline" style="border-radius:14px; padding:14px 10px; font-size:0.88rem; text-align:center; display:block; text-decoration:none;">
+            📋 Novo Plano
+        </a>
+    </div>
+
+    <!-- Recent sessions -->
+    <div class="section-header">
+        <span class="section-title">Treinos recentes</span>
+        <a href="{{ url_for('history.index') }}" class="section-link">Ver todos →</a>
+    </div>
+    <div class="card" style="padding:0 16px;">
+        {% if recent_sessions %}
+            {% for s in recent_sessions %}
+            <a href="{{ url_for('history.detail', session_id=s.id) }}" class="list-item">
+                <div class="list-icon">📅</div>
+                <div class="list-item-body">
+                    <div class="list-item-name">
+                        {{ s.date.strftime('%d/%m/%Y') }}
+                        {% if s.date == today %}<span class="badge badge-coral" style="font-size:0.65rem; padding:2px 8px; margin-left:6px;">Hoje</span>{% endif %}
+                    </div>
+                    <div class="list-item-sub">
+                        {% if s.plan %}{{ s.plan.name }} · {% endif %}
+                        {{ s.session_exercises|length }} exercício{% if s.session_exercises|length != 1 %}s{% endif %}
+                        {% if s.duration_minutes %} · {{ s.duration_minutes }}min{% endif %}
+                    </div>
+                </div>
+                <span class="list-arrow">›</span>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state" style="padding:32px 0;">
+                <div class="empty-icon">💪</div>
+                <div class="empty-title">Nenhum treino ainda</div>
+                <p style="font-size:0.85rem; margin-top:6px; color:#888;">Registre seu primeiro treino!</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Frequency chart (last 30 days) -->
+    {% if sessions_last_30 %}
+    <div style="margin-top:20px;">
+        <div class="section-header">
+            <span class="section-title">Frequência (30 dias)</span>
+        </div>
+        <div class="card">
+            <canvas id="freqChart" height="100"></canvas>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if sessions_last_30 %}
+<script>
+    // Simple bar chart using canvas
+    const sessions = {{ sessions_last_30 | map(attribute='date') | map('string') | list | tojson }};
+    const canvas = document.getElementById('freqChart');
+    const ctx = canvas.getContext('2d');
+
+    // Count by week
+    const weekCounts = {};
+    sessions.forEach(d => {
+        const date = new Date(d);
+        const week = `W${Math.ceil(date.getDate()/7)}`;
+        weekCounts[week] = (weekCounts[week] || 0) + 1;
+    });
+
+    const labels = Object.keys(weekCounts);
+    const data = Object.values(weekCounts);
+    const maxVal = Math.max(...data, 1);
+
+    canvas.width = canvas.parentElement.offsetWidth - 32;
+    const barW = Math.floor(canvas.width / labels.length) - 8;
+    const chartH = 90;
+
+    ctx.clearRect(0, 0, canvas.width, chartH);
+    labels.forEach((label, i) => {
+        const x = i * (canvas.width / labels.length) + 4;
+        const barH = (data[i] / maxVal) * (chartH - 30);
+        const y = chartH - 20 - barH;
+        ctx.fillStyle = '#E8623A';
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, 4);
+        ctx.fill();
+        ctx.fillStyle = '#888';
+        ctx.font = '10px DM Sans';
+        ctx.textAlign = 'center';
+        ctx.fillText(data[i], x + barW/2, y - 4);
+        ctx.fillText(label, x + barW/2, chartH - 2);
+    });
+</script>
+{% endif %}
+{% endblock %}

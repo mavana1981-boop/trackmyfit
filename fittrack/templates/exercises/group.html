@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}{{ group.name }}{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <a href="{{ url_for('exercises.index') }}" class="topbar-back">←</a>
+    <h1>{{ group.icon }} {{ group.name }}</h1>
+    <div class="topbar-right">
+        <span class="topbar-btn">{{ exercises|length }} exercícios</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="card" style="padding:0 16px;">
+        {% for exercise in exercises %}
+        <a href="{{ url_for('exercises.detail', exercise_id=exercise.id) }}" class="list-item">
+            <div class="list-icon" style="font-size:1.1rem; background: var(--coral-pale);">{{ group.icon }}</div>
+            <div class="list-item-body">
+                <div class="list-item-name">{{ exercise.name }}</div>
+                <div class="list-item-sub" style="display:flex; gap:6px; align-items:center; margin-top:4px; flex-wrap:wrap;">
+                    <span class="chip chip-{{ exercise.difficulty|lower }}">{{ exercise.difficulty }}</span>
+                    {% if exercise.equipment %}
+                    <span style="color:#aaa;">·</span>
+                    <span style="font-size:0.77rem; color:#888;">{{ exercise.equipment }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <span class="list-arrow">›</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
