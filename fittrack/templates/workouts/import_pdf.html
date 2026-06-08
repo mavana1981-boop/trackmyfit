@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% block title %}Importar PDF{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+    <a href="{{ url_for('workouts.index') }}" class="topbar-back">←</a>
+    <h1>Importar PDF</h1>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.upload-area {
+    border: 2.5px dashed var(--coral-light);
+    border-radius: 20px;
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--coral-pale);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+.upload-area:hover, .upload-area.drag-over {
+    border-color: var(--coral);
+    background: #FFE8E0;
+}
+.upload-area input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+.upload-icon { font-size: 3rem; margin-bottom: 12px; }
+.upload-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--coral-dark); margin-bottom: 6px; }
+.upload-sub { font-size: 0.85rem; color: #888; }
+.file-selected { margin-top: 12px; font-size: 0.85rem; font-weight: 600; color: var(--coral); }
+
+.step-list { margin: 20px 0; }
+.step {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.step:last-child { border-bottom: none; }
+.step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--coral); color: white;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-text { font-size: 0.88rem; color: #555; line-height: 1.5; padding-top: 4px; }
+
+.loading-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px;
+}
+.loading-overlay.active { display: flex; }
+.spinner {
+    width: 56px; height: 56px;
+    border: 5px solid rgba(255,255,255,0.3);
+    border-top-color: var(--coral);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    text-align: center;
+    padding: 0 32px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+
+    <!-- How it works -->
+    <div class="card" style="margin-bottom:16px;">
+        <div class="section-title" style="margin-bottom:10px;">Como funciona</div>
+        <div class="step-list">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text">Faça upload do seu PDF de treino (planilha do personal, fichas de academia, etc.)</div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text">A IA (Gemini) lê o PDF e identifica os treinos automaticamente (Treino A, B, C…)</div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text">Os planos são criados automaticamente com todos os exercícios, séries e repetições</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload form -->
+    <form method="POST" enctype="multipart/form-data" id="uploadForm">
+        <div class="upload-area" id="uploadArea">
+            <input type="file" name="pdf" id="pdfInput" accept=".pdf" required>
+            <div class="upload-icon">📄</div>
+            <div class="upload-title">Toque para selecionar o PDF</div>
+            <div class="upload-sub">ou arraste e solte aqui · Máx. 20MB</div>
+            <div class="file-selected" id="fileName"></div>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button type="submit" class="btn btn-coral btn-block" id="submitBtn">
+                🤖 Analisar com IA e Importar
+            </button>
+        </div>
+    </form>
+
+    <div style="margin-top:12px; text-align:center;">
+        <a href="{{ url_for('workouts.index') }}" style="color:#888; font-size:0.85rem;">
+            Cancelar
+        </a>
+    </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Analisando seu PDF com IA…<br>Isso pode levar alguns segundos</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const input = document.getElementById('pdfInput');
+const fileName = document.getElementById('fileName');
+const area = document.getElementById('uploadArea');
+const form = document.getElementById('uploadForm');
+const overlay = document.getElementById('loadingOverlay');
+
+input.addEventListener('change', () => {
+    if (input.files[0]) {
+        fileName.textContent = '✅ ' + input.files[0].name;
+    }
+});
+
+// Drag and drop
+area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over'); });
+area.addEventListener('dragleave', () => area.classList.remove('drag-over'));
+area.addEventListener('drop', e => {
+    e.preventDefault();
+    area.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) {
+        input.files = e.dataTransfer.files;
+        fileName.textContent = '✅ ' + e.dataTransfer.files[0].name;
+    }
+});
+
+form.addEventListener('submit', () => {
+    if (input.files[0]) {
+        overlay.classList.add('active');
+    }
+});
+</script>
+{% endblock %}
