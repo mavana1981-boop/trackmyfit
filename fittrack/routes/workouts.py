@@ -289,7 +289,7 @@ def delete(plan_id):
     db.session.delete(plan)
     db.session.commit()
     flash('Plano removido.', 'success')
-    return redirect(url_for('workouts.index'))
+    return  redirect(url_for('workouts.index'))
 
 
 @workouts_bp.route('/api/exercises/by-group/<int:group_id>')
