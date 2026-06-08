@@ -2,8 +2,6 @@
 builder = "NIXPACKS"
 
 [deploy]
-# release runs BEFORE the web process; Railway waits for it to exit 0
-releaseCommand = "python init_db.py"
 startCommand = "gunicorn 'app:create_app()' --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-level info"
 healthcheckPath = "/"
 healthcheckTimeout = 300

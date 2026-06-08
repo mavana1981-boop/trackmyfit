@@ -11,10 +11,12 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 bcrypt = Bcrypt()
 
+_db_initialized = False
+
 
 def _get_db_url():
     url = os.environ.get('DATABASE_URL', 'postgresql://localhost/fittrack')
-    # Railway (and older Heroku) emit postgres:// — SQLAlchemy 2.x needs postgresql://
+    # Railway emits postgres:// — SQLAlchemy 2.x requires postgresql://
     if url.startswith('postgres://'):
         url = url.replace('postgres://', 'postgresql://', 1)
     return url
@@ -48,6 +50,26 @@ def create_app():
     app.register_blueprint(exercises_bp)
     app.register_blueprint(workouts_bp)
     app.register_blueprint(history_bp)
+
+    @app.before_request
+    def init_db_once():
+        """
+        Lazy DB init: runs on the very first request the worker receives.
+        By then Railway has the DB service up and DATABASE_URL injected.
+        Uses a module-level flag so it only runs once per worker process.
+        """
+        global _db_initialized
+        if _db_initialized:
+            return
+        try:
+            from models import seed_data
+            db.create_all()
+            seed_data()
+            _db_initialized = True
+            log.info('DB initialised successfully.')
+        except Exception as exc:
+            # Log but don't crash — next request will retry.
+            log.error('DB init error (will retry): %s', exc)
 
     return app
 
