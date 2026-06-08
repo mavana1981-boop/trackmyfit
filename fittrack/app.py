@@ -3,16 +3,32 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
 import os
+import logging
+
+log = logging.getLogger(__name__)
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 bcrypt = Bcrypt()
 
+
+def _get_db_url():
+    url = os.environ.get('DATABASE_URL', 'postgresql://localhost/fittrack')
+    # Railway (and older Heroku) emit postgres:// — SQLAlchemy 2.x needs postgresql://
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-prod')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/fittrack')
+    app.config['SQLALCHEMY_DATABASE_URI'] = _get_db_url()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
 
     db.init_app(app)
     bcrypt.init_app(app)
@@ -33,13 +49,10 @@ def create_app():
     app.register_blueprint(workouts_bp)
     app.register_blueprint(history_bp)
 
-    with app.app_context():
-        db.create_all()
-        from models import seed_data
-        seed_data()
-
     return app
 
+
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     app = create_app()
     app.run(debug=True)
