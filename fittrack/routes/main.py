@@ -33,14 +33,25 @@ def dashboard():
         for s in recent_sessions_raw
     ]
 
-    # Last 30 days for streak
+    # Last 30 days for streak + week view
     thirty_days_ago = today - timedelta(days=30)
     sessions_last_30 = WorkoutSession.query.filter(
         WorkoutSession.user_id == current_user.id,
         WorkoutSession.date >= thirty_days_ago
     ).all()
 
-    # ── Muscle group suggestion ───────────────────────────────────────────────
+    # Build week data: for each weekday, which groups were trained this week
+    week_data = {}  # weekday_int -> {'trained': bool, 'groups': [MuscleGroup]}
+    for s in sessions_last_30:
+        if s.date >= week_start:
+            wd = s.date.weekday()
+            if wd not in week_data:
+                week_data[wd] = {'trained': True, 'groups': []}
+            for g in s.effective_muscle_groups:
+                if g not in week_data[wd]['groups']:
+                    week_data[wd]['groups'].append(g)
+
+    # Muscle group suggestion
     all_groups = MuscleGroup.query.all()
     all_sessions = (
         WorkoutSession.query
@@ -48,8 +59,6 @@ def dashboard():
         .order_by(WorkoutSession.date.desc())
         .all()
     )
-
-    # Last date each group was trained (explicit OR inferred from exercises)
     group_last_trained = {}
     for s in all_sessions:
         for mg in s.effective_muscle_groups:
@@ -61,12 +70,8 @@ def dashboard():
         last = group_last_trained.get(g.id)
         days_ago = (today - last).days if last else None
         group_suggestions.append({
-            'group': g,
-            'last_date': last,
-            'days_ago': days_ago
+            'group': g, 'last_date': last, 'days_ago': days_ago
         })
-
-    # Sort: never trained first, then most days ago
     group_suggestions.sort(
         key=lambda x: (x['days_ago'] is not None, -(x['days_ago'] or 9999))
     )
@@ -77,6 +82,7 @@ def dashboard():
                            total_sessions=total_sessions,
                            recent_sessions=recent_sessions,
                            sessions_last_30=sessions_last_30,
+                           week_data=week_data,
                            group_suggestions=group_suggestions,
                            top_suggestion=top_suggestion,
                            today=today)
