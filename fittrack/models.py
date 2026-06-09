@@ -48,6 +48,8 @@ class WorkoutPlan(db.Model):
     description = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    sort_order = db.Column(db.Integer, default=0)
+    muscle_groups = db.relationship('MuscleGroup', secondary='plan_muscle_groups', lazy=True)
     plan_exercises = db.relationship('PlanExercise', backref='plan', lazy=True, cascade='all, delete-orphan')
 
 
@@ -62,6 +64,13 @@ class PlanExercise(db.Model):
     order = db.Column(db.Integer, default=0)
     exercise = db.relationship('Exercise')
 
+
+# Junction table: muscle groups associated with a plan
+plan_muscle_groups = db.Table(
+    'plan_muscle_groups',
+    db.Column('plan_id', db.Integer, db.ForeignKey('workout_plans.id'), primary_key=True),
+    db.Column('muscle_group_id', db.Integer, db.ForeignKey('muscle_groups.id'), primary_key=True)
+)
 
 # Junction table: which muscle groups were trained in a session (explicit, user-selected)
 session_muscle_groups = db.Table(
