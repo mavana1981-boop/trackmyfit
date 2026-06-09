@@ -48,7 +48,10 @@ def _save_plans(planos, user_id):
         db.session.add(plan)
         db.session.flush()
         for i, ex_data in enumerate(p.get('exercicios', [])):
-            ex = _find_or_create_exercise(ex_data.get('nome', 'Exercício'), ex_data.get('grupo_muscular'))
+            ex = _find_or_create_exercise(
+                ex_data.get('nome', 'Exercício'),
+                ex_data.get('grupo_muscular')
+            )
             try: sets = int(ex_data.get('series', 3))
             except: sets = 3
             try: rest = int(ex_data.get('descanso_segundos', 60))
@@ -64,19 +67,7 @@ def _save_plans(planos, user_id):
     return created
 
 
-# ── PDF text extraction (for Groq fallback) ───────────────────────────────────
-
-def _extract_pdf_text(pdf_bytes):
-    try:
-        import pypdf
-        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-        text = '\n'.join(page.extract_text() or '' for page in reader.pages)
-        return text.strip()
-    except Exception as e:
-        raise ValueError(f'Erro ao extrair texto do PDF: {e}')
-
-
-# ── Shared prompt ─────────────────────────────────────────────────────────────
+# ── Shared ───────────────────────────────────────────────────────────────────
 
 PROMPT = """Analise este conteúdo de treino e extraia todos os planos encontrados.
 
@@ -100,102 +91,134 @@ Retorne SOMENTE um JSON válido, sem markdown, sem texto extra, no formato:
 }
 
 Regras:
-- Extraia TODOS os treinos (A, B, C ou qualquer nomenclatura usada)
-- Se não encontrar séries/repetições, use valores padrão razoáveis
+- Extraia TODOS os treinos (A, B, C ou qualquer nomenclatura)
+- Se não encontrar séries/reps, use valores padrão razoáveis
 - grupo_muscular deve ser um de: Abdominais, Costas, Bíceps, Peito, Pernas, Ombros, Tríceps, Panturrilha
 - Retorne apenas o JSON, sem explicações"""
 
 
-def _parse_json_response(text):
+def _parse_json(text):
     text = text.strip()
     if text.startswith('```'):
         text = text.split('\n', 1)[1]
         text = text.rsplit('```', 1)[0]
-    parsed = json.loads(text.strip())
-    return parsed.get('planos', [])
+    return json.loads(text.strip()).get('planos', [])
 
 
-# ── Gemini (primary) ──────────────────────────────────────────────────────────
+def _extract_pdf_text(pdf_bytes):
+    try:
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+        text = '\n'.join(page.extract_text() or '' for page in reader.pages)
+        return text.strip()
+    except Exception as e:
+        raise ValueError(f'Erro ao extrair texto do PDF: {e}')
+
+
+# ── Provider 1: Gemini ────────────────────────────────────────────────────────
 
 def _call_gemini(pdf_bytes):
     api_key = os.environ.get('GEMINI_API_KEY', '')
     if not api_key:
         raise ValueError('GEMINI_API_KEY não configurada.')
-
-    pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
     payload = {
-        "contents": [{
-            "parts": [
-                {"inline_data": {"mime_type": "application/pdf", "data": pdf_b64}},
-                {"text": PROMPT}
-            ]
-        }],
+        "contents": [{"parts": [
+            {"inline_data": {"mime_type": "application/pdf",
+                             "data": base64.b64encode(pdf_bytes).decode()}},
+            {"text": PROMPT}
+        ]}],
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192}
     }
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-    resp = http_requests.post(url, json=payload, timeout=60)
-    resp.raise_for_status()
-    text = resp.json()['candidates'][0]['content']['parts'][0]['text']
-    return _parse_json_response(text)
+    url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+           f"gemini-2.0-flash:generateContent?key={api_key}")
+    r = http_requests.post(url, json=payload, timeout=60)
+    r.raise_for_status()
+    text = r.json()['candidates'][0]['content']['parts'][0]['text']
+    return _parse_json(text)
 
 
-# ── Groq (fallback) ───────────────────────────────────────────────────────────
+# ── Provider 2: Groq ──────────────────────────────────────────────────────────
 
 def _call_groq(pdf_bytes):
     api_key = os.environ.get('GROQ_API_KEY', '')
     if not api_key:
         raise ValueError('GROQ_API_KEY não configurada.')
-
     pdf_text = _extract_pdf_text(pdf_bytes)
     if not pdf_text:
-        raise ValueError('Não foi possível extrair texto do PDF para o Groq.')
-
+        raise ValueError('Não foi possível extrair texto do PDF.')
     from groq import Groq
     client = Groq(api_key=api_key)
     completion = client.chat.completions.create(
         model='llama-3.3-70b-versatile',
         messages=[
-            {"role": "system", "content": "Você é um especialista em análise de planilhas de treino. Responda APENAS com JSON válido, sem markdown."},
+            {"role": "system", "content": "Você analisa planilhas de treino. Responda APENAS com JSON válido, sem markdown."},
             {"role": "user", "content": f"{PROMPT}\n\nConteúdo do PDF:\n{pdf_text[:12000]}"}
         ],
         temperature=0.1,
         max_tokens=4096
     )
-    text = completion.choices[0].message.content
-    return _parse_json_response(text)
+    return _parse_json(completion.choices[0].message.content)
 
 
-# ── Orchestrator with fallback ────────────────────────────────────────────────
+# ── Provider 3: Cloudflare Workers AI ────────────────────────────────────────
+
+def _call_cloudflare(pdf_bytes):
+    account_id = os.environ.get('CLOUDFLARE_ACCOUNT_ID', '')
+    api_token  = os.environ.get('CLOUDFLARE_API_TOKEN', '')
+    if not account_id or not api_token:
+        raise ValueError('CLOUDFLARE_ACCOUNT_ID ou CLOUDFLARE_API_TOKEN não configurados.')
+    pdf_text = _extract_pdf_text(pdf_bytes)
+    if not pdf_text:
+        raise ValueError('Não foi possível extrair texto do PDF.')
+    url = (f"https://api.cloudflare.com/client/v4/accounts/{account_id}"
+           f"/ai/run/@cf/meta/llama-3.3-70b-instruct-fp8-fast")
+    payload = {
+        "messages": [
+            {"role": "system", "content": "Você analisa planilhas de treino. Responda APENAS com JSON válido, sem markdown."},
+            {"role": "user", "content": f"{PROMPT}\n\nConteúdo do PDF:\n{pdf_text[:12000]}"}
+        ],
+        "max_tokens": 4096,
+        "temperature": 0.1
+    }
+    r = http_requests.post(
+        url,
+        headers={"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"},
+        json=payload,
+        timeout=90
+    )
+    r.raise_for_status()
+    data = r.json()
+    # Cloudflare response: {"result": {"response": "..."}, "success": true}
+    if not data.get('success'):
+        errors = data.get('errors', [])
+        raise ValueError(f'Cloudflare retornou erro: {errors}')
+    text = data['result']['response']
+    return _parse_json(text)
+
+
+# ── Orchestrator ──────────────────────────────────────────────────────────────
+
+PROVIDERS = [
+    ('Gemini',      _call_gemini),
+    ('Groq',        _call_groq),
+    ('Cloudflare',  _call_cloudflare),
+]
 
 def _analyze_pdf(pdf_bytes):
-    """Try Gemini first, fall back to Groq on any error."""
     errors = []
-
-    # 1. Try Gemini
-    try:
-        planos = _call_gemini(pdf_bytes)
-        if planos:
-            return planos, 'Gemini'
-        errors.append('Gemini: retornou lista vazia')
-    except ValueError as e:
-        errors.append(f'Gemini: {e}')
-    except http_requests.exceptions.HTTPError as e:
-        errors.append(f'Gemini HTTP {e.response.status_code}')
-    except Exception as e:
-        errors.append(f'Gemini: {e}')
-
-    # 2. Fall back to Groq
-    try:
-        planos = _call_groq(pdf_bytes)
-        if planos:
-            return planos, 'Groq'
-        errors.append('Groq: retornou lista vazia')
-    except ValueError as e:
-        errors.append(f'Groq: {e}')
-    except Exception as e:
-        errors.append(f'Groq: {e}')
-
-    raise RuntimeError('Ambas as IAs falharam: ' + ' | '.join(errors))
+    for name, fn in PROVIDERS:
+        try:
+            planos = fn(pdf_bytes)
+            if planos:
+                return planos, name
+            errors.append(f'{name}: retornou lista vazia')
+        except ValueError as e:
+            errors.append(f'{name}: {e}')
+        except http_requests.exceptions.HTTPError as e:
+            errors.append(f'{name}: HTTP {e.response.status_code} — {e.response.text[:80]}')
+        except Exception as e:
+            errors.append(f'{name}: {type(e).__name__}: {e}')
+    raise RuntimeError('Todos os provedores falharam:\n' + '\n'.join(f'  • {e}' for e in errors))
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -231,9 +254,8 @@ def import_pdf():
         except json.JSONDecodeError:
             flash('A IA retornou um formato inesperado. Tente novamente.', 'error')
         except Exception as e:
-            flash(f'Erro ao importar: {str(e)}', 'error')
+            flash(str(e), 'error')
         return redirect(url_for('workouts.import_pdf'))
-
     return render_template('workouts/import_pdf.html')
 
 
