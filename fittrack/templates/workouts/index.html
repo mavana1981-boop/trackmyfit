@@ -9,40 +9,201 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_css %}
+<style>
+.plan-card {
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:14px; margin-bottom:10px; overflow:hidden;
+    transition:all 0.15s;
+}
+.plan-card.dragging { opacity:0.5; border-color:var(--red); }
+.plan-card.drag-over { border-color:var(--red); background:rgba(232,25,44,0.05); }
+
+.plan-header {
+    display:flex; align-items:center; gap:10px;
+    padding:14px 16px; cursor:grab;
+}
+.plan-header:active { cursor:grabbing; }
+.drag-handle { color:var(--text3); font-size:1.1rem; flex-shrink:0; cursor:grab; padding:4px; }
+.plan-name-wrap { flex:1; min-width:0; }
+.plan-name { font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; }
+.plan-meta { font-size:0.72rem; color:var(--text2); margin-top:2px; }
+.plan-toggle { background:none; border:none; color:var(--text3); font-size:1.1rem; cursor:pointer; padding:4px 8px; }
+
+.plan-groups { display:flex; flex-wrap:wrap; gap:5px; padding:0 16px 10px; }
+.plan-group-tag { display:inline-flex; align-items:center; gap:4px; background:var(--red-glow); border:1px solid rgba(232,25,44,0.2); border-radius:6px; padding:3px 8px; font-size:0.68rem; font-weight:700; font-family:'Syne',sans-serif; color:var(--red); }
+
+.plan-edit-panel { display:none; border-top:1px solid var(--border); padding:14px 16px; background:var(--bg2); }
+
+.group-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+.group-chip { display:inline-flex; align-items:center; gap:5px; background:var(--bg4); border:1.5px solid var(--border); border-radius:10px; padding:7px 12px; cursor:pointer; transition:all 0.15s; font-family:'Syne',sans-serif; font-weight:700; font-size:0.76rem; color:var(--text2); user-select:none; }
+.group-chip.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
+
+.plan-actions { display:flex; gap:8px; padding:0 16px 14px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="content">
+
     {% if not plans %}
     <div class="card" style="background:var(--red); border:none; text-align:center; padding:24px; margin-bottom:16px;">
         <div style="font-size:2rem; margin-bottom:8px;">🤖</div>
         <div style="font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; color:white; margin-bottom:6px;">Importe sua planilha</div>
-        <p style="color:rgba(255,255,255,0.75); font-size:0.82rem; margin-bottom:14px; line-height:1.5;">Envie o PDF do seu personal e a IA cria os planos automaticamente</p>
+        <p style="color:rgba(255,255,255,0.75); font-size:0.82rem; margin-bottom:14px;">Envie o PDF do seu personal e a IA cria os planos automaticamente</p>
         <a href="{{ url_for('workouts.import_pdf') }}" class="btn" style="background:white; color:var(--red); font-weight:800; border-radius:10px; padding:10px 20px;">📄 Importar PDF</a>
     </div>
     <div class="sep-label">ou crie manualmente</div>
     <a href="{{ url_for('workouts.new') }}" class="btn btn-outline btn-block" style="margin-bottom:20px;">+ Criar plano</a>
+
     {% else %}
-    {% for plan in plans %}
-    <div class="card" style="margin-bottom:10px;">
-        <div style="margin-bottom:10px;">
-            <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:1rem;">{{ plan.name }}</div>
-            <div style="font-size:0.73rem; color:var(--text2); margin-top:2px;">{{ plan.plan_exercises|length }} exercícios · {{ plan.created_at.strftime('%d/%m/%Y') }}</div>
-        </div>
-        {% if plan.description %}<p style="font-size:0.84rem; color:var(--text2); margin-bottom:10px; line-height:1.5;">{{ plan.description }}</p>{% endif %}
-        {% if plan.plan_exercises %}
-        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px;">
-            {% for pe in plan.plan_exercises[:4] %}<span class="tag">{{ pe.exercise.name }}</span>{% endfor %}
-            {% if plan.plan_exercises|length > 4 %}<span class="tag" style="color:var(--text3);">+{{ plan.plan_exercises|length-4 }}</span>{% endif %}
-        </div>
-        {% endif %}
-        <div style="display:flex; gap:8px;">
-            <a href="{{ url_for('workouts.detail', plan_id=plan.id) }}" class="btn btn-ghost btn-sm" style="flex:1; justify-content:center;">Ver plano</a>
-            <a href="/live/{{ plan.id }}" class="btn btn-red btn-sm" style="flex:1; justify-content:center;">▶ Treinar</a>
-            <form method="POST" action="{{ url_for('workouts.delete', plan_id=plan.id) }}" onsubmit="return confirm('Remover?')">
-                <button type="submit" class="btn btn-sm btn-danger" style="padding:8px 10px;">🗑</button>
-            </form>
-        </div>
+
+    <div style="font-size:0.72rem; color:var(--text2); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+        <span>☰</span> Arraste para reordenar
     </div>
-    {% endfor %}
+
+    <div id="planList">
+        {% for plan in plans %}
+        <div class="plan-card" data-id="{{ plan.id }}" draggable="true">
+
+            <!-- Header (drag handle + name + toggle) -->
+            <div class="plan-header">
+                <span class="drag-handle">☰</span>
+                <div class="plan-name-wrap">
+                    <div class="plan-name">{{ plan.name }}</div>
+                    <div class="plan-meta">{{ plan.plan_exercises|length }} exercícios</div>
+                </div>
+                <button class="plan-toggle" onclick="toggleEdit({{ plan.id }}, this)" title="Editar">✏️</button>
+            </div>
+
+            <!-- Muscle group tags -->
+            {% if plan.muscle_groups %}
+            <div class="plan-groups">
+                {% for g in plan.muscle_groups %}
+                <span class="plan-group-tag">{{ g.icon }} {{ g.name }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Edit panel -->
+            <div class="plan-edit-panel" id="edit{{ plan.id }}">
+                <form method="POST" action="{{ url_for('workouts.edit', plan_id=plan.id) }}"
+                      id="form{{ plan.id }}">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Nome</label>
+                        <input type="text" name="name" class="form-control"
+                               value="{{ plan.name }}" placeholder="Nome do treino">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Grupos musculares</label>
+                        <div class="group-chips" id="chips{{ plan.id }}">
+                            {% set sel_ids = plan.muscle_groups | map(attribute='id') | list %}
+                            {% for g in groups %}
+                            <div class="group-chip {{ 'sel' if g.id in sel_ids }}"
+                                 data-id="{{ g.id }}"
+                                 onclick="toggleChip(this)">
+                                {{ g.icon }} {{ g.name }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div id="hidden{{ plan.id }}"></div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" onclick="toggleEdit({{ plan.id }}, null)"
+                                class="btn btn-ghost btn-sm" style="flex:1;">Cancelar</button>
+                        <button type="button"
+                                onclick="submitEdit({{ plan.id }})"
+                                class="btn btn-red btn-sm" style="flex:1;">💾 Salvar</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="plan-actions">
+                <a href="/live/{{ plan.id }}" class="btn btn-red btn-sm" style="flex:1; justify-content:center;">▶ Treinar</a>
+                <a href="{{ url_for('workouts.detail', plan_id=plan.id) }}" class="btn btn-ghost btn-sm" style="flex:1; justify-content:center;">Ver</a>
+                <form method="POST" action="{{ url_for('workouts.delete', plan_id=plan.id) }}"
+                      onsubmit="return confirm('Remover?')">
+                    <button type="submit" class="btn btn-sm btn-danger" style="padding:8px 10px;">🗑</button>
+                </form>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Edit panel ────────────────────────────────────────────────────────────────
+function toggleEdit(planId, btn) {
+    const panel = document.getElementById('edit' + planId);
+    const open = panel.style.display !== 'block';
+    // Close all panels first
+    document.querySelectorAll('.plan-edit-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.plan-toggle').forEach(b => b.textContent = '✏️');
+    if (open) {
+        panel.style.display = 'block';
+        if (btn) btn.textContent = '✕';
+        panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+}
+
+function toggleChip(el) { el.classList.toggle('sel'); }
+
+function submitEdit(planId) {
+    const hid = document.getElementById('hidden' + planId);
+    hid.innerHTML = '';
+    document.querySelectorAll('#chips' + planId + ' .group-chip.sel').forEach(chip => {
+        const inp = document.createElement('input');
+        inp.type='hidden'; inp.name='muscle_group_ids'; inp.value=chip.dataset.id;
+        hid.appendChild(inp);
+    });
+    document.getElementById('form' + planId).submit();
+}
+
+// ── Drag to reorder ───────────────────────────────────────────────────────────
+let dragEl = null;
+
+document.querySelectorAll('.plan-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+        dragEl = card;
+        setTimeout(() => card.classList.add('dragging'), 0);
+    });
+    card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        saveOrder();
+    });
+    card.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (dragEl && dragEl !== card) {
+            const list = document.getElementById('planList');
+            const cards = [...list.querySelectorAll('.plan-card')];
+            const dragIdx = cards.indexOf(dragEl);
+            const overIdx = cards.indexOf(card);
+            if (dragIdx < overIdx) {
+                card.after(dragEl);
+            } else {
+                card.before(dragEl);
+            }
+        }
+    });
+    card.addEventListener('dragenter', e => { e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => { e.preventDefault(); card.classList.remove('drag-over'); });
+});
+
+function saveOrder() {
+    const order = [...document.querySelectorAll('.plan-card')].map(c => c.dataset.id);
+    fetch('{{ url_for("workouts.reorder") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({order})
+    });
+}
+</script>
 {% endblock %}
