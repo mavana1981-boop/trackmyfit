@@ -4,7 +4,9 @@
 <div class="topbar">
     <a href="{{ url_for('exercises.index') }}" class="topbar-back">←</a>
     <h1>{{ group.icon }} {{ group.name|upper }}</h1>
-    <div class="topbar-right"><span class="topbar-btn">{{ exercises|length }}</span></div>
+    <div class="topbar-right">
+        <a href="{{ url_for('exercises.new') }}" class="topbar-btn topbar-btn-red">+ Novo</a>
+    </div>
 </div>
 {% endblock %}
 {% block content %}
@@ -15,7 +17,7 @@
             <div class="list-icon">{{ group.icon }}</div>
             <div class="list-item-body">
                 <div class="list-item-name">{{ ex.name }}</div>
-                <div class="list-item-sub" style="display:flex; gap:6px; align-items:center; margin-top:4px; flex-wrap:wrap;">
+                <div class="list-item-sub" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                     <span class="chip chip-{{ ex.difficulty|lower }}">{{ ex.difficulty }}</span>
                     {% if ex.equipment %}<span style="color:var(--text3);">·</span><span style="font-size:0.72rem;">{{ ex.equipment }}</span>{% endif %}
                 </div>
