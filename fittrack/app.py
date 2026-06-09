@@ -1,7 +1,4 @@
-import os
-import logging
-import threading
-import time
+import os, logging, threading, time
 
 log = logging.getLogger(__name__)
 
@@ -14,6 +11,15 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 bcrypt = Bcrypt()
 
+MIGRATIONS = [
+    "ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS custom_name VARCHAR(150)",
+    """CREATE TABLE IF NOT EXISTS session_muscle_groups (
+        session_id      INTEGER NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
+        muscle_group_id INTEGER NOT NULL REFERENCES muscle_groups(id)    ON DELETE CASCADE,
+        PRIMARY KEY (session_id, muscle_group_id)
+    )""",
+]
+
 
 def _get_db_url():
     url = os.environ.get('DATABASE_URL', '')
@@ -25,20 +31,26 @@ def _get_db_url():
 
 
 def _init_db_background(app, retries=20, delay=5):
-    """
-    Runs in a background thread: waits for Postgres, creates tables, seeds data.
-    Never crashes the main process.
-    """
+    from sqlalchemy import text
     for attempt in range(1, retries + 1):
         try:
             with app.app_context():
+                # Create missing tables
                 db.create_all()
+                # Run migrations for existing installs
+                with db.engine.connect() as conn:
+                    for sql in MIGRATIONS:
+                        try:
+                            conn.execute(text(sql.strip()))
+                        except Exception as e:
+                            log.warning('Migration skipped: %s', e)
+                    conn.commit()
                 from models import seed_data
                 seed_data()
-            log.info('DB initialised successfully on attempt %d.', attempt)
+            log.info('DB initialised on attempt %d.', attempt)
             return
         except Exception as exc:
-            log.warning('DB init attempt %d/%d failed: %s', attempt, retries, exc)
+            log.warning('DB init attempt %d/%d: %s', attempt, retries, exc)
             time.sleep(delay)
     log.error('DB init gave up after %d attempts.', retries)
 
@@ -72,7 +84,6 @@ def create_app():
     app.register_blueprint(workouts_bp)
     app.register_blueprint(history_bp)
 
-    # Start background DB init — does NOT block gunicorn boot or healthcheck
     t = threading.Thread(target=_init_db_background, args=(app,), daemon=True)
     t.start()
 
