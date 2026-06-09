@@ -18,6 +18,12 @@ MIGRATIONS = [
         muscle_group_id INTEGER NOT NULL REFERENCES muscle_groups(id)    ON DELETE CASCADE,
         PRIMARY KEY (session_id, muscle_group_id)
     )""",
+    "ALTER TABLE workout_plans ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
+    """CREATE TABLE IF NOT EXISTS plan_muscle_groups (
+        plan_id         INTEGER NOT NULL REFERENCES workout_plans(id) ON DELETE CASCADE,
+        muscle_group_id INTEGER NOT NULL REFERENCES muscle_groups(id) ON DELETE CASCADE,
+        PRIMARY KEY (plan_id, muscle_group_id)
+    )""",
 ]
 
 
@@ -35,9 +41,7 @@ def _init_db_background(app, retries=20, delay=5):
     for attempt in range(1, retries + 1):
         try:
             with app.app_context():
-                # Create missing tables
                 db.create_all()
-                # Run migrations for existing installs
                 with db.engine.connect() as conn:
                     for sql in MIGRATIONS:
                         try:
