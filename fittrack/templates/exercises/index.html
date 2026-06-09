@@ -1,7 +1,12 @@
 {% extends 'base.html' %}
 {% block title %}Exercícios{% endblock %}
 {% block topbar %}
-<div class="topbar"><h1>EXERCÍCIOS</h1></div>
+<div class="topbar">
+    <h1>EXERCÍCIOS</h1>
+    <div class="topbar-right">
+        <a href="{{ url_for('exercises.new') }}" class="topbar-btn topbar-btn-red">+ Novo</a>
+    </div>
+</div>
 {% endblock %}
 {% block extra_css %}
 <style>
