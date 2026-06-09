@@ -1,52 +1,132 @@
 {% extends 'base.html' %}
-{% block title %}Treino {{ session.date.strftime('%d/%m/%Y') }}{% endblock %}
+{% block title %}{{ session.display_name }}{% endblock %}
 {% block topbar %}
 <div class="topbar">
     <a href="{{ url_for('history.index') }}" class="topbar-back">←</a>
     <h1>DETALHE</h1>
+    <div class="topbar-right">
+        <button onclick="toggleEdit()" class="topbar-btn" id="editBtn">✏️ Editar</button>
+    </div>
 </div>
+{% endblock %}
+{% block extra_css %}
+<style>
+.group-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.group-chip { display:flex; align-items:center; gap:6px; background:var(--bg4); border:1.5px solid var(--border); border-radius:10px; padding:8px 12px; cursor:pointer; transition:all 0.15s; font-family:'Syne',sans-serif; font-weight:700; font-size:0.78rem; color:var(--text2); }
+.group-chip input { display:none; }
+.group-chip.selected { border-color:var(--red); background:var(--red-glow); color:var(--red); }
+#editPanel { display:none; }
+</style>
 {% endblock %}
 {% block content %}
 <div class="content">
+
+    <!-- Header -->
     <div class="card" style="background:var(--bg2); border-color:var(--border); margin-bottom:14px; padding:20px;">
-        <div style="font-size:0.65rem; color:var(--red); font-weight:800; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;">Data</div>
-        <div style="font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; margin-bottom:10px;">{{ session.date.strftime('%d de %B de %Y') }}</div>
+        <div style="font-size:0.65rem; color:var(--red); font-weight:800; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px;">{{ session.date.strftime('%d de %B de %Y') }}</div>
+        <div style="font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:800; margin-bottom:10px;">{{ session.display_name }}</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            {% if session.plan %}<span class="badge badge-red">{{ session.plan.name }}</span>{% endif %}
+            {% if session.plan %}<span class="badge badge-muted">{{ session.plan.name }}</span>{% endif %}
             {% if session.duration_minutes %}<span class="badge badge-muted">⏱ {{ session.duration_minutes }}min</span>{% endif %}
             <span class="badge badge-muted">{{ session.session_exercises|length }} exercícios</span>
         </div>
+        {% if session.effective_muscle_groups %}
+        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:10px;">
+            {% for g in session.effective_muscle_groups %}
+            <span class="badge badge-red">{{ g.icon }} {{ g.name }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
+
+    <!-- Edit panel -->
+    <div id="editPanel">
+        <form method="POST" action="{{ url_for('history.edit', session_id=session.id) }}">
+            <div class="card" style="margin-bottom:12px;">
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Nome do treino</label>
+                    <input type="text" name="custom_name" class="form-control"
+                        value="{{ session.custom_name or '' }}"
+                        placeholder="{{ session.plan.name if session.plan else 'Treino Avulso' }}">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Grupos musculares treinados</label>
+                    <div class="group-chips">
+                        {% set sel_ids = session.muscle_groups | map(attribute='id') | list %}
+                        {% for g in all_groups %}
+                        <label class="group-chip {{ 'selected' if g.id in sel_ids }}" id="chip{{ g.id }}"
+                            onclick="this.classList.toggle('selected')">
+                            <input type="checkbox" name="muscle_group_ids" value="{{ g.id }}"
+                                {{ 'checked' if g.id in sel_ids }}>
+                            {{ g.icon }} {{ g.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:16px;">
+                <button type="button" onclick="toggleEdit()" class="btn btn-ghost" style="flex:1;">Cancelar</button>
+                <button type="submit" class="btn btn-red" style="flex:1;">💾 Salvar</button>
+            </div>
+        </form>
+    </div>
+
     {% if session.notes %}
     <div class="card" style="margin-bottom:12px; border-left:3px solid var(--red);">
         <div style="font-size:0.65rem; color:var(--text2); font-weight:800; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:5px;">Observações</div>
         <p style="font-size:0.9rem; color:var(--text2);">{{ session.notes }}</p>
     </div>
     {% endif %}
+
     <div class="section-header" style="margin-bottom:10px;"><span class="section-title">Exercícios</span></div>
     {% for se in session.session_exercises %}
     <div class="card" style="margin-bottom:10px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-            <div style="width:30px; height:30px; border-radius:8px; background:var(--red); color:white; font-family:'Syne',sans-serif; font-weight:800; font-size:0.82rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">{{ loop.index }}</div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <div style="width:28px; height:28px; border-radius:8px; background:var(--red); color:white; font-family:'Syne',sans-serif; font-weight:800; font-size:0.8rem; display:flex; align-items:center; justify-content:center;">{{ loop.index }}</div>
             <div>
-                <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:0.92rem;">{{ se.exercise.name }}</div>
+                <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:0.9rem;">{{ se.exercise.name }}</div>
                 <div style="font-size:0.72rem; color:var(--text2);">{{ se.exercise.muscle_group.name }}</div>
             </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
             {% for label, val, color in [('Séries', se.sets_done or '—', 'var(--red)'), ('Reps', se.reps_done or '—', 'var(--text)'), ('Carga', (se.weight_kg|string+'kg') if se.weight_kg else '—', 'var(--text)')] %}
             <div style="text-align:center; background:var(--bg4); border-radius:10px; padding:10px 4px;">
-                <div style="font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; color:{{ color }};">{{ val }}</div>
+                <div style="font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:800; color:{{ color }};">{{ val }}</div>
                 <div style="font-size:0.62rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">{{ label }}</div>
             </div>
             {% endfor %}
         </div>
-        {% if se.notes %}<div style="margin-top:8px; font-size:0.8rem; color:var(--text2);">{{ se.notes }}</div>{% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:24px 0;">
+        <div class="empty-icon">💪</div>
+        <div class="empty-title">Nenhum exercício registrado</div>
     </div>
     {% endfor %}
+
     <hr class="divider">
     <form method="POST" action="{{ url_for('history.delete', session_id=session.id) }}" onsubmit="return confirm('Remover este registro?')">
         <button type="submit" class="btn btn-danger btn-block">🗑 Remover registro</button>
     </form>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function toggleEdit() {
+    const p = document.getElementById('editPanel');
+    const b = document.getElementById('editBtn');
+    const visible = p.style.display === 'block';
+    p.style.display = visible ? 'none' : 'block';
+    b.textContent = visible ? '✏️ Editar' : '✕ Fechar';
+}
+
+// Fix checkbox toggle on label click
+document.querySelectorAll('.group-chip').forEach(chip => {
+    chip.addEventListener('click', function(e) {
+        if (e.target.tagName === 'INPUT') return;
+        const cb = this.querySelector('input');
+        cb.checked = !cb.checked;
+    });
+});
+</script>
 {% endblock %}
