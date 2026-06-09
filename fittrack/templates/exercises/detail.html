@@ -8,7 +8,7 @@
 {% endblock %}
 {% block content %}
 <div class="content">
-    <div class="card" style="background:var(--bg2); margin-bottom:14px; padding:20px; border-color:var(--border);">
+    <div class="card" style="background:var(--bg2); margin-bottom:14px; padding:20px;">
         <div style="font-size:2.5rem; margin-bottom:10px;">{{ exercise.muscle_group.icon }}</div>
         <div style="font-size:0.65rem; color:var(--red); font-weight:800; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px;">{{ exercise.muscle_group.name }}</div>
         <div style="font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:800; line-height:1.1; margin-bottom:12px;">{{ exercise.name }}</div>
@@ -29,6 +29,9 @@
         <p style="font-size:0.9rem; color:var(--text2); line-height:1.7;">{{ exercise.instructions }}</p>
     </div>
     {% endif %}
-    <a href="{{ url_for('history.start') }}" class="btn btn-red btn-block">▶ TREINAR AGORA</a>
+    <a href="{{ url_for('history.start') }}" class="btn btn-red btn-block" style="margin-bottom:10px;">▶ TREINAR AGORA</a>
+    <form method="POST" action="{{ url_for('exercises.delete', exercise_id=exercise.id) }}" onsubmit="return confirm('Remover este exercício?')">
+        <button type="submit" class="btn btn-danger btn-block">🗑 Remover exercício</button>
+    </form>
 </div>
 {% endblock %}
