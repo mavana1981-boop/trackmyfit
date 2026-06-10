@@ -6,13 +6,25 @@ from app import db
 
 main_bp = Blueprint('main', __name__)
 
+
+
+
 @main_bp.route('/health')
 def health():
     return 'ok', 200
 
 
-
 @main_bp.route('/')
+def index():
+    """Root — serves login for unauthenticated users (200), dashboard for logged-in."""
+    from flask_login import current_user
+    if current_user.is_authenticated:
+        return dashboard()
+    # Return login page with 200 (not redirect) so healthcheck passes
+    from flask import render_template
+    return render_template('auth/login.html')
+
+
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
