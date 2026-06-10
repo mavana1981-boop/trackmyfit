@@ -62,6 +62,7 @@ class PlanExercise(db.Model):
     reps = db.Column(db.String(20), default='10-12')
     rest_seconds = db.Column(db.Integer, default=60)
     order = db.Column(db.Integer, default=0)
+    suggested_weight = db.Column(db.Float, nullable=True)  # AI-suggested next weight
     exercise = db.relationship('Exercise')
 
 
@@ -125,6 +126,7 @@ class SessionExercise(db.Model):
     reps_done = db.Column(db.String(20))
     weight_kg = db.Column(db.Float)
     notes = db.Column(db.Text)
+    effort_level = db.Column(db.String(10), nullable=True)  # easy, ok, hard
     exercise = db.relationship('Exercise')
 
 
