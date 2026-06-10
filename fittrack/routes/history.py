@@ -225,18 +225,35 @@ def save_live():
     for item in ex_data:
         ex_idx = item.get('ex_idx', 0)
         sets = item.get('sets', [])
-        done_sets = [s for s in sets if s.get('done')]
-        if not done_sets or ex_idx >= len(exercise_ids):
+        if ex_idx >= len(exercise_ids):
             continue
-        last_set = done_sets[-1]
+
+        # Only count sets that have BOTH weight and reps filled
+        valid_sets = []
+        for s in sets:
+            w = (s.get('weight') or '').strip()
+            r = (s.get('reps') or '').strip()
+            if w and r:
+                try:
+                    float(w)  # must be numeric
+                    valid_sets.append(s)
+                except ValueError:
+                    pass
+
+        # Skip exercise entirely if no valid set
+        if not valid_sets:
+            continue
+
+        last_set = valid_sets[-1]
         try:
-            weight = float(last_set.get('weight')) if last_set.get('weight') else None
+            weight = float(last_set.get('weight'))
         except (ValueError, TypeError):
             weight = None
+
         se = SessionExercise(
             session_id=ws.id,
             exercise_id=exercise_ids[ex_idx],
-            sets_done=len(done_sets),
+            sets_done=len(valid_sets),
             reps_done=last_set.get('reps', ''),
             weight_kg=weight
         )
