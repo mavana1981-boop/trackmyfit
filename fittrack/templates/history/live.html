@@ -4,7 +4,7 @@
 {% block topbar %}
 <div class="topbar">
     <a href="{{ url_for('history.start') }}" class="topbar-back"
-       onclick="return confirm('Sair? O treino já foi iniciado no histórico.')">✕</a>
+       onclick="return confirm('Sair? O treino já foi iniciado.')">✕</a>
     <div style="flex:1; text-align:center;">
         <div style="font-size:0.58rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Ao vivo</div>
         <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px;">{{ plan_name }}</h1>
@@ -15,7 +15,32 @@
 
 {% block extra_css %}
 <style>
-/* Nav dots */
+/* ── Overview grid ── */
+#overviewScreen { padding:16px; max-width:480px; margin:0 auto; }
+.ov-title { font-family:'Bebas Neue',sans-serif; font-size:0.8rem; letter-spacing:1.5px; color:var(--text2); margin-bottom:12px; }
+.ex-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ex-grid-card {
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:12px; padding:14px 12px; cursor:pointer;
+    transition:all 0.15s; position:relative; overflow:hidden;
+}
+.ex-grid-card:active { transform:scale(0.96); }
+.ex-grid-card.has-data {
+    border-color:var(--red);
+    background:rgba(232,25,44,0.07);
+}
+.ex-grid-card.has-data::after {
+    content:'✓';
+    position:absolute; top:8px; right:10px;
+    font-family:'Bebas Neue',sans-serif; font-size:0.9rem;
+    color:var(--red); font-weight:700;
+}
+.gc-icon { font-size:1.5rem; margin-bottom:8px; }
+.gc-name { font-weight:700; font-size:0.85rem; line-height:1.3; margin-bottom:5px; }
+.gc-meta { font-size:0.7rem; color:var(--text2); }
+
+/* ── Exercise detail screen ── */
+#detailScreen { display:none; }
 .ex-nav { display:flex; gap:5px; padding:10px 16px; overflow-x:auto; background:var(--bg2); border-bottom:1px solid var(--border); scrollbar-width:none; }
 .ex-nav::-webkit-scrollbar { display:none; }
 .ex-dot {
@@ -23,7 +48,7 @@
     background:var(--bg4); border:1.5px solid var(--border2);
     font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3);
     display:flex; align-items:center; justify-content:center;
-    cursor:pointer; transition:all 0.2s; letter-spacing:0.5px;
+    cursor:pointer; transition:all 0.2s;
 }
 .ex-dot.active  { background:var(--bg3); border-color:var(--text2); color:var(--text); }
 .ex-dot.has-data { background:var(--red); border-color:var(--red); color:white; }
@@ -32,17 +57,15 @@
 .ex-card { display:none; }
 .ex-card.active { display:block; }
 
-/* Exercise hero */
 .ex-hero { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:12px; position:relative; overflow:hidden; }
 .ex-hero::after { content:''; position:absolute; top:-30px; right:-30px; width:110px; height:110px; border-radius:50%; background:var(--red-glow); pointer-events:none; }
 .ex-group { font-size:0.6rem; color:var(--red); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
 .ex-name { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.5px; line-height:1.1; margin-bottom:10px; position:relative; z-index:1; }
 
-/* Sets table */
 .sets-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:12px; }
 .sets-head { display:grid; grid-template-columns:28px 1fr 1fr 40px; gap:4px; padding:8px 14px; background:var(--bg4); border-bottom:1px solid var(--border); }
 .sets-head span { font-size:0.58rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.6px; text-align:center; }
-.set-row { display:grid; grid-template-columns:28px 1fr 1fr 40px; gap:4px; padding:8px 14px; border-bottom:1px solid var(--border); align-items:center; transition:background 0.15s; }
+.set-row { display:grid; grid-template-columns:28px 1fr 1fr 40px; gap:4px; padding:8px 14px; border-bottom:1px solid var(--border); align-items:center; }
 .set-row:last-child { border-bottom:none; }
 .set-row.done-row { background:rgba(232,25,44,0.04); }
 .set-num { font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3); text-align:center; }
@@ -51,7 +74,6 @@
 .set-check { background:var(--bg4); border:1px solid var(--border2); border-radius:8px; color:var(--text3); font-size:1rem; padding:8px 0; cursor:pointer; width:100%; transition:all 0.15s; display:flex; align-items:center; justify-content:center; }
 .set-check.done { background:rgba(232,25,44,0.12); border-color:rgba(232,25,44,0.3); color:var(--red); }
 
-/* Load buttons */
 .load-section { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
 .load-label { font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
 .load-btns { display:grid; grid-template-columns:repeat(3,1fr) 2px repeat(3,1fr); gap:6px; align-items:center; }
@@ -61,7 +83,6 @@
 .load-btn:active { transform:scale(0.95); }
 .load-sep { background:var(--border); height:32px; border-radius:2px; }
 
-/* History chart */
 .hist-section { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
 .hist-bars { display:flex; align-items:flex-end; gap:5px; height:52px; margin:8px 0 4px; }
 .hist-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; }
@@ -73,8 +94,6 @@
 .finish-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:300; flex-direction:column; overflow-y:auto; }
 .finish-modal.active { display:flex; }
 .finish-inner { background:var(--bg2); border-radius:18px 18px 0 0; padding:24px 20px 48px; margin-top:auto; border-top:1px solid var(--border); }
-.finish-title { font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:1px; margin-bottom:4px; }
-.finish-sub { font-size:0.78rem; color:var(--text2); margin-bottom:20px; }
 .group-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .group-chip { display:inline-flex; align-items:center; gap:5px; background:var(--bg4); border:1.5px solid var(--border); border-radius:9px; padding:8px 12px; cursor:pointer; transition:all 0.15s; font-weight:700; font-size:0.76rem; color:var(--text2); user-select:none; text-transform:uppercase; letter-spacing:0.4px; }
 .group-chip.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
@@ -89,117 +108,146 @@
 {% endblock %}
 
 {% block content %}
-<!-- Dot navigation -->
-<div class="ex-nav" id="exNav">
-    {% for ex in exercises %}
-    <div class="ex-dot {% if loop.first %}active{% endif %}" id="dot{{ loop.index0 }}" onclick="goTo({{ loop.index0 }})">{{ loop.index }}</div>
-    {% endfor %}
+
+<!-- ══════════════════════════════════════
+     SCREEN 1: Exercise overview grid
+     ══════════════════════════════════════ -->
+<div id="overviewScreen">
+    <div class="ov-title">SELECIONE O EXERCÍCIO</div>
+    <div class="ex-grid" id="exGrid">
+        {% for ex in exercises %}
+        <div class="ex-grid-card" id="gc{{ loop.index0 }}" onclick="openExercise({{ loop.index0 }})">
+            <div class="gc-icon">{{ ex.muscle_group.icon }}</div>
+            <div class="gc-name">{{ ex.name }}</div>
+            <div class="gc-meta">{{ ex.sets }}× {{ ex.reps }} reps</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Finish button at bottom of overview -->
+    <div style="margin-top:20px;">
+        <button onclick="openFinish()" class="btn btn-red btn-block btn-lg"
+            style="font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:1px;">
+            🏁 FINALIZAR TREINO
+        </button>
+    </div>
 </div>
 
-<div class="content" style="padding-top:14px;">
-    {% for ex in exercises %}
-    <div class="ex-card {% if loop.first %}active{% endif %}" id="ex{{ loop.index0 }}">
+<!-- ══════════════════════════════════════
+     SCREEN 2: Exercise detail
+     ══════════════════════════════════════ -->
+<div id="detailScreen">
+    <!-- Nav dots -->
+    <div class="ex-nav" id="exNav">
+        {% for ex in exercises %}
+        <div class="ex-dot" id="dot{{ loop.index0 }}" onclick="goTo({{ loop.index0 }})">{{ loop.index }}</div>
+        {% endfor %}
+    </div>
 
-        <!-- Hero -->
-        <div class="ex-hero">
-            <div class="ex-group">{{ ex.muscle_group.icon }} {{ ex.muscle_group.name }}</div>
-            <div class="ex-name">{{ ex.name }}</div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; position:relative; z-index:1;">
-                <span class="badge badge-muted">{{ ex.sets }}× séries</span>
-                <span class="badge badge-muted">{{ ex.reps }} reps</span>
-                {% if ex.weight %}<span class="badge badge-red" id="curW{{ loop.index0 }}">{{ ex.weight }}kg</span>{% endif %}
-                <span class="badge badge-muted">{{ ex.rest_seconds }}s</span>
-            </div>
-        </div>
+    <div style="padding:14px 16px 80px; max-width:480px; margin:0 auto;">
+        <!-- Back to overview -->
+        <button onclick="showOverview()" class="btn btn-ghost btn-sm" style="margin-bottom:14px; width:100%;">
+            ← Ver todos os exercícios
+        </button>
 
-        <!-- Sets -->
-        <div class="sets-wrap">
-            <div class="sets-head">
-                <span>#</span><span>Kg</span><span>Reps</span><span>✓</span>
-            </div>
-            {% for s in range(ex.sets) %}
-            <div class="set-row" id="sr{{ loop.index0 }}_{{ s }}">
-                <div class="set-num">{{ s+1 }}</div>
-                <input class="set-input" type="number" step="0.5" min="0"
-                    id="w{{ loop.index0 }}_{{ s }}"
-                    value="{{ ex.weight or '' }}" placeholder="—"
-                    oninput="checkDot({{ loop.index0 }})">
-                <input class="set-input" type="text"
-                    id="r{{ loop.index0 }}_{{ s }}"
-                    value="{{ ex.reps }}" placeholder="—"
-                    oninput="checkDot({{ loop.index0 }})">
-                <button class="set-check" onclick="checkSet({{ loop.index0 }},{{ s }},{{ ex.rest_seconds }})">✓</button>
-            </div>
-            {% endfor %}
-        </div>
+        {% for ex in exercises %}
+        <div class="ex-card" id="ex{{ loop.index0 }}">
 
-        <!-- Load adjust -->
-        <div class="load-section">
-            <div class="load-label">Ajustar Carga</div>
-            <div class="load-btns">
-                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-10)">−10%</button>
-                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-5)">−5%</button>
-                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-1)">−1%</button>
-                <div class="load-sep"></div>
-                <button class="load-btn plus" onclick="adj({{ loop.index0 }},1)">+1%</button>
-                <button class="load-btn plus" onclick="adj({{ loop.index0 }},5)">+5%</button>
-                <button class="load-btn plus" onclick="adj({{ loop.index0 }},10)">+10%</button>
+            <div class="ex-hero">
+                <div class="ex-group">{{ ex.muscle_group.icon }} {{ ex.muscle_group.name }}</div>
+                <div class="ex-name">{{ ex.name }}</div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; position:relative; z-index:1;">
+                    <span class="badge badge-muted">{{ ex.sets }}× séries</span>
+                    <span class="badge badge-muted">{{ ex.reps }} reps</span>
+                    {% if ex.weight %}<span class="badge badge-red">{{ ex.weight }}kg</span>{% endif %}
+                    <span class="badge badge-muted">{{ ex.rest_seconds }}s</span>
+                </div>
             </div>
-        </div>
 
-        <!-- History -->
-        {% if ex.history %}
-        <div class="hist-section">
-            <div class="load-label">Histórico de carga</div>
-            {% set max_w = namespace(val=0.1) %}
-            {% for h in ex.history %}{% if h.weight_kg and h.weight_kg > max_w.val %}{% set max_w.val = h.weight_kg %}{% endif %}{% endfor %}
-            <div class="hist-bars">
-                {% for h in ex.history %}
-                <div class="hist-bar-col">
-                    <div class="hist-bar" style="height:{{ ((h.weight_kg or 0)/max_w.val*48)|int }}px;"></div>
-                    <div class="hist-val">{{ h.weight_kg or '—' }}</div>
-                    <div class="hist-date">{{ h.date.strftime('%d/%m') }}</div>
+            <div class="sets-wrap">
+                <div class="sets-head"><span>#</span><span>Kg</span><span>Reps</span><span>✓</span></div>
+                {% for s in range(ex.sets) %}
+                <div class="set-row" id="sr{{ loop.index0 }}_{{ s }}">
+                    <div class="set-num">{{ s+1 }}</div>
+                    <input class="set-input" type="number" step="0.5" min="0"
+                        id="w{{ loop.index0 }}_{{ s }}"
+                        value="{{ ex.weight or '' }}" placeholder="—"
+                        oninput="onDataInput({{ loop.index0 }})">
+                    <input class="set-input" type="text"
+                        id="r{{ loop.index0 }}_{{ s }}"
+                        value="{{ ex.reps }}" placeholder="—"
+                        oninput="onDataInput({{ loop.index0 }})">
+                    <button class="set-check" onclick="checkSet({{ loop.index0 }},{{ s }},{{ ex.rest_seconds }})">✓</button>
                 </div>
                 {% endfor %}
             </div>
-            <div style="font-size:0.74rem; color:var(--text2);">
-                Última: <strong style="color:var(--text);">{{ ex.history[-1].weight_kg or '—' }}kg × {{ ex.history[-1].reps_done or '—' }} reps</strong>
+
+            <div class="load-section">
+                <div class="load-label">Ajustar Carga</div>
+                <div class="load-btns">
+                    <button class="load-btn minus" onclick="adj({{ loop.index0 }},-10)">−10%</button>
+                    <button class="load-btn minus" onclick="adj({{ loop.index0 }},-5)">−5%</button>
+                    <button class="load-btn minus" onclick="adj({{ loop.index0 }},-1)">−1%</button>
+                    <div class="load-sep"></div>
+                    <button class="load-btn plus" onclick="adj({{ loop.index0 }},1)">+1%</button>
+                    <button class="load-btn plus" onclick="adj({{ loop.index0 }},5)">+5%</button>
+                    <button class="load-btn plus" onclick="adj({{ loop.index0 }},10)">+10%</button>
+                </div>
             </div>
-        </div>
-        {% endif %}
 
-        <!-- Navigation -->
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-            {% if not loop.first %}
-            <button onclick="goTo({{ loop.index0-1 }})" class="btn btn-ghost" style="flex:1;">← Anterior</button>
+            {% if ex.history %}
+            <div class="hist-section">
+                <div class="load-label">Histórico de carga</div>
+                {% set max_w = namespace(val=0.1) %}
+                {% for h in ex.history %}{% if h.weight_kg and h.weight_kg > max_w.val %}{% set max_w.val = h.weight_kg %}{% endif %}{% endfor %}
+                <div class="hist-bars">
+                    {% for h in ex.history %}
+                    <div class="hist-bar-col">
+                        <div class="hist-bar" style="height:{{ ((h.weight_kg or 0)/max_w.val*48)|int }}px;"></div>
+                        <div class="hist-val">{{ h.weight_kg or '—' }}</div>
+                        <div class="hist-date">{{ h.date.strftime('%d/%m') }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div style="font-size:0.74rem; color:var(--text2);">
+                    Última: <strong style="color:var(--text);">{{ ex.history[-1].weight_kg or '—' }}kg × {{ ex.history[-1].reps_done or '—' }} reps</strong>
+                </div>
+            </div>
             {% endif %}
-            {% if not loop.last %}
-            <button onclick="goTo({{ loop.index0+1 }})" class="btn btn-red" style="flex:1; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.5px;">PRÓXIMO →</button>
-            {% else %}
-            <button onclick="openFinish()" class="btn btn-success" style="flex:1; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.5px;">🏁 FINALIZAR</button>
-            {% endif %}
-        </div>
 
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                {% if not loop.first %}
+                <button onclick="goTo({{ loop.index0-1 }})" class="btn btn-ghost" style="flex:1;">← Anterior</button>
+                {% endif %}
+                <button onclick="showOverview()" class="btn btn-ghost" style="flex:1;">☰ Todos</button>
+                {% if not loop.last %}
+                <button onclick="goTo({{ loop.index0+1 }})" class="btn btn-red" style="flex:1; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.5px;">PRÓXIMO →</button>
+                {% else %}
+                <button onclick="openFinish()" class="btn btn-success" style="flex:1; font-family:'Bebas Neue',sans-serif; font-size:1rem;">🏁 FINALIZAR</button>
+                {% endif %}
+            </div>
+
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-
-    <!-- Submit form -->
-    <form method="POST" action="{{ url_for('history.save_live') }}" id="finishForm" style="display:none;">
-        <input type="hidden" name="session_id" value="{{ session_id }}">
-        <input type="hidden" name="plan_id" value="{{ plan_id or '' }}">
-        <input type="hidden" name="duration" id="finalDuration">
-        <input type="hidden" name="custom_name" id="finalName">
-        <input type="hidden" name="exercise_data" id="exerciseData">
-        <input type="hidden" name="exercise_ids_json" value="{{ exercise_ids_json|safe }}">
-        <div id="groupInputs"></div>
-    </form>
 </div>
+
+<!-- Submit form -->
+<form method="POST" action="{{ url_for('history.save_live') }}" id="finishForm" style="display:none;">
+    <input type="hidden" name="session_id" value="{{ session_id }}">
+    <input type="hidden" name="plan_id" value="{{ plan_id or '' }}">
+    <input type="hidden" name="duration" id="finalDuration">
+    <input type="hidden" name="custom_name" id="finalName">
+    <input type="hidden" name="exercise_data" id="exerciseData">
+    <input type="hidden" name="exercise_ids_json" value="{{ exercise_ids_json|safe }}">
+    <div id="groupInputs"></div>
+</form>
 
 <!-- Finish modal -->
 <div class="finish-modal" id="finishModal">
     <div class="finish-inner">
-        <div class="finish-title">🏁 FINALIZAR TREINO</div>
-        <div class="finish-sub">Revise antes de salvar</div>
+        <div style="font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:1px; margin-bottom:4px;">🏁 FINALIZAR TREINO</div>
+        <div style="font-size:0.78rem; color:var(--text2); margin-bottom:20px;">Revise antes de salvar</div>
         <div class="form-group">
             <label class="form-label">Nome do treino (opcional)</label>
             <input type="text" id="customName" class="form-control"
@@ -211,8 +259,7 @@
             <div class="group-chips">
                 {% for g in all_groups %}
                 <div class="group-chip {% if g.id in selected_group_ids %}sel{% endif %}"
-                     id="chip{{ g.id }}" data-id="{{ g.id }}"
-                     onclick="this.classList.toggle('sel')">
+                     data-id="{{ g.id }}" onclick="this.classList.toggle('sel')">
                     {{ g.icon }} {{ g.name }}
                 </div>
                 {% endfor %}
@@ -231,8 +278,8 @@
         <div class="rest-num" id="restNum">60</div>
         <div class="rest-lbl">Descanso</div>
     </div>
-    <p style="color:var(--text2); font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.6px;">Prepare-se para a próxima série</p>
-    <button onclick="skipRest()" class="btn btn-ghost">Pular</button>
+    <p style="color:var(--text2); font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.6px;">Prepare-se</p>
+    <button onclick="skipRest()" class="btn btn-ghost btn-sm">Pular</button>
 </div>
 {% endblock %}
 
@@ -240,7 +287,6 @@
 <script>
 const exerciseIds = {{ exercise_ids_json|safe }};
 let current = 0, t0 = Date.now(), restInt = null;
-let selectedGroups = new Set({{ selected_group_ids|tojson }});
 
 // Timer
 setInterval(() => {
@@ -248,68 +294,82 @@ setInterval(() => {
     document.getElementById('timer').textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 }, 1000);
 
-// Navigate
-function goTo(i) {
-    document.querySelectorAll('.ex-card').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.ex-dot').forEach(d => d.classList.remove('active'));
-    document.getElementById('ex'+i).classList.add('active');
-    document.getElementById('dot'+i).classList.add('active');
-    current = i;
-    document.getElementById('dot'+i).scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+// ── Screen switching ──────────────────────────────────────────────────────────
+function showOverview() {
+    document.getElementById('overviewScreen').style.display = 'block';
+    document.getElementById('detailScreen').style.display = 'none';
 }
 
-// Check if exercise has data (weight + reps in any set) → dot turns red
-function checkDot(ei) {
+function openExercise(idx) {
+    document.getElementById('overviewScreen').style.display = 'none';
+    document.getElementById('detailScreen').style.display = 'block';
+    goTo(idx);
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function goTo(idx) {
+    document.querySelectorAll('.ex-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.ex-dot').forEach(d => d.classList.remove('active'));
+    document.getElementById('ex'+idx).classList.add('active');
+    document.getElementById('dot'+idx).classList.add('active');
+    current = idx;
+    document.getElementById('dot'+idx).scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+}
+
+// ── Data detection → red dot + red grid card ──────────────────────────────────
+function onDataInput(ei) {
     const rowCount = document.querySelectorAll('[id^="sr'+ei+'_"]').length;
     let hasData = false;
     for (let si = 0; si < rowCount; si++) {
-        const w = document.getElementById('w'+ei+'_'+si)?.value || '';
-        const r = document.getElementById('r'+ei+'_'+si)?.value || '';
-        if (w.trim() !== '' && r.trim() !== '') { hasData = true; break; }
+        const w = (document.getElementById('w'+ei+'_'+si)?.value || '').trim();
+        const r = (document.getElementById('r'+ei+'_'+si)?.value || '').trim();
+        if (w !== '' && r !== '') { hasData = true; break; }
     }
+    // Nav dot
     const dot = document.getElementById('dot'+ei);
-    if (hasData) {
-        dot.classList.add('has-data');
-    } else {
-        dot.classList.remove('has-data');
-    }
+    dot.classList.toggle('has-data', hasData);
+    // Grid card
+    const gc = document.getElementById('gc'+ei);
+    if (gc) gc.classList.toggle('has-data', hasData);
 }
 
-// Check set ✓
+// ── Set check ✓ ───────────────────────────────────────────────────────────────
 function checkSet(ei, si, rest) {
     const btn = document.querySelector('#sr'+ei+'_'+si+' .set-check');
     const row = document.getElementById('sr'+ei+'_'+si);
     const done = btn.classList.toggle('done');
     row.classList.toggle('done-row', done);
-    // Also re-check dot
-    checkDot(ei);
+    onDataInput(ei);
     if (done && rest > 0) startRest(rest);
 }
 
-// Rest timer
+// ── Rest timer ────────────────────────────────────────────────────────────────
 function startRest(sec) {
     let r = sec;
     document.getElementById('restNum').textContent = r;
     document.getElementById('restOverlay').classList.add('active');
     if (restInt) clearInterval(restInt);
-    restInt = setInterval(() => { r--; document.getElementById('restNum').textContent=r; if(r<=0) skipRest(); }, 1000);
+    restInt = setInterval(() => {
+        r--;
+        document.getElementById('restNum').textContent = r;
+        if (r <= 0) skipRest();
+    }, 1000);
 }
 function skipRest() { clearInterval(restInt); document.getElementById('restOverlay').classList.remove('active'); }
 
-// Load adjust
+// ── Load adjust ───────────────────────────────────────────────────────────────
 function adj(ei, pct) {
-    const rows = document.querySelectorAll('[id^="sr'+ei+'_"]');
-    rows.forEach((_, si) => {
+    document.querySelectorAll('[id^="sr'+ei+'_"]').forEach((_, si) => {
         const inp = document.getElementById('w'+ei+'_'+si);
         const cur = parseFloat(inp.value) || 0;
         if (cur === 0) return;
         inp.value = (Math.round(cur*(1+pct/100)*2)/2).toFixed(1);
     });
-    checkDot(ei);
+    onDataInput(ei);
 }
 
-// Finish modal
-function openFinish() { document.getElementById('finishModal').classList.add('active'); }
+// ── Finish ────────────────────────────────────────────────────────────────────
+function openFinish()  { document.getElementById('finishModal').classList.add('active'); }
 function closeFinish() { document.getElementById('finishModal').classList.remove('active'); }
 
 function submitFinish() {
@@ -317,7 +377,6 @@ function submitFinish() {
     document.getElementById('finalDuration').value = mins;
     document.getElementById('finalName').value = document.getElementById('customName').value;
 
-    // Group inputs
     const gi = document.getElementById('groupInputs');
     gi.innerHTML = '';
     document.querySelectorAll('.group-chip.sel').forEach(chip => {
@@ -326,7 +385,6 @@ function submitFinish() {
         gi.appendChild(inp);
     });
 
-    // Collect exercise data
     const data = [];
     document.querySelectorAll('.ex-card').forEach((_, ei) => {
         const sets = [];
