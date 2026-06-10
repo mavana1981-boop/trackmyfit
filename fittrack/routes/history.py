@@ -113,6 +113,7 @@ def live(plan_id):
             e.reps = '10-12'
             e.rest_seconds = 60
             e.weight = None
+            e.pe_id = None
             e.history = _exercise_history(current_user.id, ex.id)
             exercises.append(e)
         plan_name = 'Treino Avulso'
@@ -145,7 +146,8 @@ def live(plan_id):
             e.sets = pe.sets
             e.reps = pe.reps
             e.rest_seconds = pe.rest_seconds
-            e.weight = last.weight_kg if last else None
+            e.weight = pe.suggested_weight if pe.suggested_weight else (last.weight_kg if last else None)
+            e.pe_id = pe.id
             e.history = _exercise_history(current_user.id, pe.exercise_id)
             exercises.append(e)
 
@@ -164,6 +166,9 @@ def live(plan_id):
 
     import json as _json
     exercise_ids_json = _json.dumps([e.id for e in exercises])
+    # Map exercise_id -> plan_exercise_id for suggest-weight API
+    pe_ids_json = _json.dumps([getattr(e, 'pe_id', None) for e in exercises])
+    plan_id_int = plan_id_val
     all_groups = MuscleGroup.query.all()
 
     return render_template('history/live.html',
@@ -172,6 +177,8 @@ def live(plan_id):
                            plan_id=plan_id_val,
                            session_id=session_id,
                            exercise_ids_json=exercise_ids_json,
+                           pe_ids_json=pe_ids_json,
+                           plan_id_int=plan_id_int,
                            all_groups=all_groups,
                            selected_group_ids=selected_group_ids)
 
@@ -250,12 +257,14 @@ def save_live():
         except (ValueError, TypeError):
             weight = None
 
+        effort = item.get('effort', None)
         se = SessionExercise(
             session_id=ws.id,
             exercise_id=exercise_ids[ex_idx],
             sets_done=len(valid_sets),
             reps_done=last_set.get('reps', ''),
-            weight_kg=weight
+            weight_kg=weight,
+            effort_level=effort
         )
         db.session.add(se)
 
