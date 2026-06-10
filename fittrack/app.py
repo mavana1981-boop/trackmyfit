@@ -32,7 +32,9 @@ MIGRATIONS = [
 def _get_db_url():
     url = os.environ.get('DATABASE_URL', '')
     if not url:
-        raise RuntimeError('DATABASE_URL não configurada.')
+        # Fallback para dev local sem travar o boot
+        log.warning('DATABASE_URL não definida — usando sqlite em memória para boot')
+        return 'sqlite:///:memory:'
     if url.startswith('postgres://'):
         url = url.replace('postgres://', 'postgresql://', 1)
     return url
@@ -40,6 +42,10 @@ def _get_db_url():
 
 def _init_db_background(app, retries=20, delay=5):
     from sqlalchemy import text
+    # Se for sqlite em memória (sem DATABASE_URL), não tentar conectar
+    if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+        log.warning('Rodando sem banco real — DATABASE_URL não configurada.')
+        return
     for attempt in range(1, retries + 1):
         try:
             with app.app_context():
