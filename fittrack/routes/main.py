@@ -1,12 +1,10 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
 from models import WorkoutSession, WorkoutPlan, MuscleGroup
 from datetime import datetime, timedelta
 from app import db
 
 main_bp = Blueprint('main', __name__)
-
-
 
 
 @main_bp.route('/health')
@@ -16,11 +14,9 @@ def health():
 
 @main_bp.route('/')
 def index():
-    """Root — serves login for unauthenticated users (200), dashboard for logged-in."""
     from flask_login import current_user
     if current_user.is_authenticated:
         return dashboard()
-    # Return login page with 200 (not redirect) so healthcheck passes
     from flask import render_template
     return render_template('auth/login.html')
 
@@ -35,30 +31,24 @@ def dashboard():
         WorkoutSession.user_id == current_user.id,
         WorkoutSession.date >= week_start
     ).count()
-
     total_sessions = WorkoutSession.query.filter_by(user_id=current_user.id).count()
 
-    # Last 5 sessions enriched with muscle groups
     recent_sessions_raw = (
-        WorkoutSession.query
-        .filter_by(user_id=current_user.id)
-        .order_by(WorkoutSession.date.desc())
-        .limit(5).all()
+        WorkoutSession.query.filter_by(user_id=current_user.id)
+        .order_by(WorkoutSession.date.desc()).limit(5).all()
     )
     recent_sessions = [
         {'session': s, 'groups': s.effective_muscle_groups}
         for s in recent_sessions_raw
     ]
 
-    # Last 30 days for streak + week view
     thirty_days_ago = today - timedelta(days=30)
     sessions_last_30 = WorkoutSession.query.filter(
         WorkoutSession.user_id == current_user.id,
         WorkoutSession.date >= thirty_days_ago
     ).all()
 
-    # Build week data: for each weekday, which groups were trained this week
-    week_data = {}  # weekday_int -> {'trained': bool, 'groups': [MuscleGroup]}
+    week_data = {}
     for s in sessions_last_30:
         if s.date >= week_start:
             wd = s.date.weekday()
@@ -68,13 +58,10 @@ def dashboard():
                 if g not in week_data[wd]['groups']:
                     week_data[wd]['groups'].append(g)
 
-    # Muscle group suggestion
     all_groups = MuscleGroup.query.all()
     all_sessions = (
-        WorkoutSession.query
-        .filter_by(user_id=current_user.id)
-        .order_by(WorkoutSession.date.desc())
-        .all()
+        WorkoutSession.query.filter_by(user_id=current_user.id)
+        .order_by(WorkoutSession.date.desc()).all()
     )
     group_last_trained = {}
     for s in all_sessions:
@@ -86,13 +73,13 @@ def dashboard():
     for g in all_groups:
         last = group_last_trained.get(g.id)
         days_ago = (today - last).days if last else None
-        group_suggestions.append({
-            'group': g, 'last_date': last, 'days_ago': days_ago
-        })
-    group_suggestions.sort(
-        key=lambda x: (x['days_ago'] is not None, -(x['days_ago'] or 9999))
-    )
+        group_suggestions.append({'group': g, 'last_date': last, 'days_ago': days_ago})
+    group_suggestions.sort(key=lambda x: (x['days_ago'] is not None, -(x['days_ago'] or 9999)))
     top_suggestion = group_suggestions[0] if group_suggestions else None
+
+    # All plans with their muscle group IDs for JS filtering
+    all_plans = WorkoutPlan.query.filter_by(user_id=current_user.id)\
+        .order_by(WorkoutPlan.sort_order, WorkoutPlan.created_at).all()
 
     return render_template('main/dashboard.html',
                            weekly_sessions=weekly_sessions,
@@ -102,4 +89,6 @@ def dashboard():
                            week_data=week_data,
                            group_suggestions=group_suggestions,
                            top_suggestion=top_suggestion,
+                           all_groups=all_groups,
+                           all_plans=all_plans,
                            today=today)
