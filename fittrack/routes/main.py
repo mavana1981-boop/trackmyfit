@@ -6,6 +6,11 @@ from app import db
 
 main_bp = Blueprint('main', __name__)
 
+@main_bp.route('/health')
+def health():
+    return 'ok', 200
+
+
 
 @main_bp.route('/')
 @main_bp.route('/dashboard')
