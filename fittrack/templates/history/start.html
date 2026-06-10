@@ -10,48 +10,30 @@
 
 {% block extra_css %}
 <style>
-.mode-card {
-    background:var(--bg3); border:1px solid var(--border);
-    border-radius:14px; padding:16px 18px; margin-bottom:10px;
-    display:flex; align-items:center; gap:16px; cursor:pointer;
-    transition:all 0.15s; text-decoration:none; color:var(--text);
-}
+.mode-card { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:16px 18px; margin-bottom:10px; display:flex; align-items:center; gap:16px; cursor:pointer; transition:all 0.15s; color:var(--text); }
 .mode-card:active { transform:scale(0.98); }
 .mode-card.active { border-color:var(--red); background:var(--red-glow); }
-.mode-icon { font-size:1.8rem; flex-shrink:0; width:46px; height:46px; background:var(--bg4); border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
-.mode-title { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; margin-bottom:2px; }
-.mode-sub { font-size:0.74rem; color:var(--text2); line-height:1.4; }
+.mode-icon { font-size:1.8rem; flex-shrink:0; width:44px; height:44px; background:var(--bg4); border-radius:11px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
+.mode-title { font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px; margin-bottom:2px; }
+.mode-sub { font-size:0.72rem; color:var(--text2); line-height:1.4; }
 
-/* Plan list */
-.plan-card-sel {
-    background:var(--bg4); border:1.5px solid var(--border);
-    border-radius:12px; padding:14px 16px; margin-bottom:8px;
-    cursor:pointer; transition:all 0.15s;
-}
-.plan-card-sel.selected { border-color:var(--red); background:var(--red-glow); }
-.plan-card-sel:active { transform:scale(0.98); }
-.plan-card-title { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; }
-.plan-card-meta { font-size:0.72rem; color:var(--text2); margin-top:2px; }
+/* Plan cards */
+.plan-card-sel { background:var(--bg3); border:1px solid var(--border); border-radius:12px; margin-bottom:10px; overflow:hidden; transition:all 0.15s; }
+.plan-card-header { display:flex; align-items:center; gap:10px; padding:14px 16px; }
+.plan-card-title { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; flex:1; }
+.plan-card-meta { font-size:0.7rem; color:var(--text2); margin-top:2px; }
+.start-btn-inline { background:var(--red); color:white; border:none; border-radius:8px; padding:10px 16px; font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px; cursor:pointer; flex-shrink:0; text-decoration:none; display:inline-flex; align-items:center; gap:4px; }
 
-/* Exercise preview cards */
-.ex-preview-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
-.ex-preview-card {
-    background:var(--bg3); border:1px solid var(--border);
-    border-radius:12px; padding:12px;
-}
-.ex-preview-icon { font-size:1.2rem; margin-bottom:6px; }
-.ex-preview-name { font-weight:600; font-size:0.8rem; line-height:1.3; margin-bottom:4px; }
-.ex-preview-meta { font-size:0.68rem; color:var(--text2); }
+/* Exercise preview */
+.ex-preview-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 16px 14px; }
+.ex-preview-card { background:var(--bg4); border:1px solid var(--border); border-radius:10px; padding:11px 10px; }
+.gc-icon { font-size:1.2rem; margin-bottom:5px; }
+.gc-name { font-weight:700; font-size:0.78rem; line-height:1.3; margin-bottom:3px; }
+.gc-meta { font-size:0.65rem; color:var(--text2); }
 
 /* Group grid */
 .group-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.group-btn {
-    background:var(--bg4); border:1px solid var(--border);
-    border-radius:12px; padding:14px 10px; text-align:center;
-    cursor:pointer; transition:all 0.15s;
-    font-weight:700; font-size:0.78rem; color:var(--text2);
-    display:flex; flex-direction:column; gap:6px; align-items:center;
-}
+.group-btn { background:var(--bg4); border:1px solid var(--border); border-radius:12px; padding:14px 10px; text-align:center; cursor:pointer; transition:all 0.15s; font-weight:700; font-size:0.78rem; color:var(--text2); display:flex; flex-direction:column; gap:6px; align-items:center; }
 .group-btn:active { transform:scale(0.96); }
 .group-btn.selected { border-color:var(--red); background:var(--red-glow); color:var(--red); }
 .g-icon { font-size:1.6rem; }
@@ -80,7 +62,7 @@
         </div>
     </div>
 
-    <!-- ── Plan selection ── -->
+    <!-- Plan section -->
     <div id="planSection" style="display:none; margin-top:20px;">
         <div class="section-header" style="margin-bottom:10px;">
             <span class="section-title">Escolha o plano</span>
@@ -88,38 +70,29 @@
 
         {% if plans %}
             {% for plan in plans %}
-            <div class="plan-card-sel" id="planOpt{{ plan.id }}"
-                 onclick="selectPlan({{ plan.id }}, this)">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="flex:1;">
+            <div class="plan-card-sel" id="planCard{{ plan.id }}">
+                <div class="plan-card-header">
+                    <div style="flex:1; cursor:pointer;" onclick="togglePreview({{ plan.id }})">
                         <div class="plan-card-title">{{ plan.name }}</div>
                         <div class="plan-card-meta">
                             {{ plan.plan_exercises|length }} exercício{% if plan.plan_exercises|length != 1 %}s{% endif %}
-                            {% if plan.muscle_groups %}
-                            · {% for g in plan.muscle_groups %}{{ g.icon }}{% endfor %}
-                            {% endif %}
+                            {% if plan.muscle_groups %} · {% for g in plan.muscle_groups %}{{ g.icon }}{% endfor %}{% endif %}
                         </div>
                     </div>
-                    <span style="color:var(--text3); font-size:0.9rem;">›</span>
+                    <a href="/live/{{ plan.id }}" class="start-btn-inline">▶ INICIAR</a>
                 </div>
-
-                <!-- Exercise preview (hidden until selected) -->
-                <div class="ex-preview-grid" id="exPreview{{ plan.id }}" style="display:none;">
+                <!-- Exercise preview (toggle) -->
+                <div class="ex-preview-grid" id="prev{{ plan.id }}" style="display:none;">
                     {% for pe in plan.plan_exercises | sort(attribute='order') %}
                     <div class="ex-preview-card">
-                        <div class="ex-preview-icon">{{ pe.exercise.muscle_group.icon }}</div>
-                        <div class="ex-preview-name">{{ pe.exercise.name }}</div>
-                        <div class="ex-preview-meta">{{ pe.sets }}× {{ pe.reps }} reps</div>
+                        <div class="gc-icon">{{ pe.exercise.muscle_group.icon }}</div>
+                        <div class="gc-name">{{ pe.exercise.name }}</div>
+                        <div class="gc-meta">{{ pe.sets }}× {{ pe.reps }} reps</div>
                     </div>
                     {% endfor %}
                 </div>
             </div>
             {% endfor %}
-
-            <button onclick="startWithPlan()" id="btnStartPlan" disabled
-                class="btn btn-red btn-block btn-lg" style="margin-top:16px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:1px;">
-                ▶ INICIAR TREINO
-            </button>
         {% else %}
             <div class="empty-state" style="padding:24px 0;">
                 <div class="empty-icon">📋</div>
@@ -129,7 +102,7 @@
         {% endif %}
     </div>
 
-    <!-- ── Free workout ── -->
+    <!-- Free workout -->
     <div id="freeSection" style="display:none; margin-top:20px;">
         <div class="section-header" style="margin-bottom:10px;">
             <span class="section-title">Grupos musculares</span>
@@ -143,7 +116,8 @@
             {% endfor %}
         </div>
         <button onclick="startFree()" id="btnStartFree" disabled
-            class="btn btn-red btn-block btn-lg" style="margin-top:16px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:1px;">
+            class="btn btn-red btn-block btn-lg"
+            style="margin-top:16px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:1px;">
             ▶ INICIAR TREINO AVULSO
         </button>
     </div>
@@ -153,7 +127,6 @@
 
 {% block extra_js %}
 <script>
-let selectedPlanId = null;
 let selectedGroups = [];
 
 function selectMode(mode) {
@@ -163,31 +136,9 @@ function selectMode(mode) {
     document.getElementById('modeFree').classList.toggle('active', mode === 'free');
 }
 
-function selectPlan(id, el) {
-    // Deselect all
-    document.querySelectorAll('.plan-card-sel').forEach(c => {
-        c.classList.remove('selected');
-        const preview = c.querySelector('[id^="exPreview"]');
-        if (preview) preview.style.display = 'none';
-    });
-
-    if (selectedPlanId === id) {
-        // Toggle off
-        selectedPlanId = null;
-        document.getElementById('btnStartPlan').disabled = true;
-        return;
-    }
-
-    // Select this one
-    selectedPlanId = id;
-    el.classList.add('selected');
-    const preview = document.getElementById('exPreview' + id);
-    if (preview) preview.style.display = 'grid';
-    document.getElementById('btnStartPlan').disabled = false;
-}
-
-function startWithPlan() {
-    if (selectedPlanId) window.location.href = '/live/' + selectedPlanId;
+function togglePreview(planId) {
+    const prev = document.getElementById('prev' + planId);
+    prev.style.display = prev.style.display === 'grid' ? 'none' : 'grid';
 }
 
 function toggleGroup(id, el) {
