@@ -261,6 +261,65 @@ def delete(plan_id):
     return redirect(url_for('workouts.index'))
 
 
+
+
+@workouts_bp.route('/plans/<int:plan_id>/exercises/<int:pe_id>/edit', methods=['POST'])
+@login_required
+def edit_plan_exercise(plan_id, pe_id):
+    plan = WorkoutPlan.query.filter_by(id=plan_id, user_id=current_user.id).first_or_404()
+    pe = PlanExercise.query.filter_by(id=pe_id, plan_id=plan.id).first_or_404()
+    name   = request.form.get('name', '').strip()
+    sets   = request.form.get('sets', pe.sets)
+    reps   = request.form.get('reps', pe.reps)
+    rest   = request.form.get('rest', pe.rest_seconds)
+    # If name changed, try to find matching exercise or create new one
+    if name and name.lower() != pe.exercise.name.lower():
+        ex = _find_or_create_exercise(name)
+        pe.exercise_id = ex.id
+    try: pe.sets = int(sets)
+    except: pass
+    pe.reps = str(reps)
+    try: pe.rest_seconds = int(rest)
+    except: pass
+    db.session.commit()
+    return redirect(url_for('workouts.index') + f'#plan{plan_id}')
+
+@workouts_bp.route('/plans/<int:plan_id>/exercises/add', methods=['POST'])
+@login_required
+def add_exercise(plan_id):
+    plan = WorkoutPlan.query.filter_by(id=plan_id, user_id=current_user.id).first_or_404()
+    exercise_id = request.form.get('exercise_id')
+    sets       = request.form.get('sets', 3)
+    reps       = request.form.get('reps', '10-12')
+    rest       = request.form.get('rest', 60)
+    if not exercise_id:
+        flash('Selecione um exercício.', 'error')
+        return redirect(url_for('workouts.index'))
+    max_order = max((pe.order for pe in plan.plan_exercises), default=-1) + 1
+    pe = PlanExercise(
+        plan_id=plan.id,
+        exercise_id=int(exercise_id),
+        sets=int(sets),
+        reps=str(reps),
+        rest_seconds=int(rest),
+        order=max_order
+    )
+    db.session.add(pe)
+    db.session.commit()
+    flash('Exercício adicionado.', 'success')
+    return redirect(url_for('workouts.index') + f'#plan{plan_id}')
+
+
+@workouts_bp.route('/plans/<int:plan_id>/exercises/<int:pe_id>/remove', methods=['POST'])
+@login_required
+def remove_exercise(plan_id, pe_id):
+    plan = WorkoutPlan.query.filter_by(id=plan_id, user_id=current_user.id).first_or_404()
+    pe = PlanExercise.query.filter_by(id=pe_id, plan_id=plan.id).first_or_404()
+    db.session.delete(pe)
+    db.session.commit()
+    return redirect(url_for('workouts.index') + f'#plan{plan_id}')
+
+
 @workouts_bp.route('/api/exercises/by-group/<int:group_id>')
 @login_required
 def exercises_by_group(group_id):
