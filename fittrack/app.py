@@ -19,6 +19,8 @@ MIGRATIONS = [
         PRIMARY KEY (session_id, muscle_group_id)
     )""",
     "ALTER TABLE workout_plans ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
+    "ALTER TABLE plan_exercises ADD COLUMN IF NOT EXISTS suggested_weight FLOAT",
+    "ALTER TABLE session_exercises ADD COLUMN IF NOT EXISTS effort_level VARCHAR(10)",
     """CREATE TABLE IF NOT EXISTS plan_muscle_groups (
         plan_id         INTEGER NOT NULL REFERENCES workout_plans(id) ON DELETE CASCADE,
         muscle_group_id INTEGER NOT NULL REFERENCES muscle_groups(id) ON DELETE CASCADE,
