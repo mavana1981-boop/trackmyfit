@@ -4,7 +4,7 @@
 {% block topbar %}
 <div class="topbar">
     <a href="{{ url_for('main.dashboard') }}" class="topbar-back">←</a>
-    <h1>Começar Treino</h1>
+    <h1>COMEÇAR TREINO</h1>
 </div>
 {% endblock %}
 
@@ -12,37 +12,49 @@
 <style>
 .mode-card {
     background:var(--bg3); border:1px solid var(--border);
-    border-radius:16px; padding:18px; margin-bottom:10px;
+    border-radius:14px; padding:16px 18px; margin-bottom:10px;
     display:flex; align-items:center; gap:16px; cursor:pointer;
     transition:all 0.15s; text-decoration:none; color:var(--text);
 }
 .mode-card:active { transform:scale(0.98); }
 .mode-card.active { border-color:var(--red); background:var(--red-glow); }
-.mode-icon { font-size:2rem; flex-shrink:0; width:48px; height:48px; background:var(--bg4); border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
-.mode-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; margin-bottom:3px; }
-.mode-sub { font-size:0.76rem; color:var(--text2); line-height:1.4; }
+.mode-icon { font-size:1.8rem; flex-shrink:0; width:46px; height:46px; background:var(--bg4); border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
+.mode-title { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; margin-bottom:2px; }
+.mode-sub { font-size:0.74rem; color:var(--text2); line-height:1.4; }
 
-.plan-item {
-    background:var(--bg4); border:1px solid var(--border);
+/* Plan list */
+.plan-card-sel {
+    background:var(--bg4); border:1.5px solid var(--border);
     border-radius:12px; padding:14px 16px; margin-bottom:8px;
-    display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.15s;
+    cursor:pointer; transition:all 0.15s;
 }
-.plan-item:active { transform:scale(0.98); }
-.plan-item.selected { border-color:var(--red); background:var(--red-glow); }
-.plan-item input[type=radio] { accent-color:var(--red); width:16px; height:16px; flex-shrink:0; }
+.plan-card-sel.selected { border-color:var(--red); background:var(--red-glow); }
+.plan-card-sel:active { transform:scale(0.98); }
+.plan-card-title { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; }
+.plan-card-meta { font-size:0.72rem; color:var(--text2); margin-top:2px; }
 
+/* Exercise preview cards */
+.ex-preview-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+.ex-preview-card {
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:12px; padding:12px;
+}
+.ex-preview-icon { font-size:1.2rem; margin-bottom:6px; }
+.ex-preview-name { font-weight:600; font-size:0.8rem; line-height:1.3; margin-bottom:4px; }
+.ex-preview-meta { font-size:0.68rem; color:var(--text2); }
+
+/* Group grid */
 .group-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .group-btn {
     background:var(--bg4); border:1px solid var(--border);
-    border-radius:12px; padding:16px 12px; text-align:center;
+    border-radius:12px; padding:14px 10px; text-align:center;
     cursor:pointer; transition:all 0.15s;
-    font-family:'Syne',sans-serif; font-weight:800; font-size:0.8rem;
-    color:var(--text2); display:flex; flex-direction:column;
-    gap:6px; align-items:center;
+    font-weight:700; font-size:0.78rem; color:var(--text2);
+    display:flex; flex-direction:column; gap:6px; align-items:center;
 }
 .group-btn:active { transform:scale(0.96); }
 .group-btn.selected { border-color:var(--red); background:var(--red-glow); color:var(--red); }
-.group-btn .g-icon { font-size:1.6rem; }
+.g-icon { font-size:1.6rem; }
 </style>
 {% endblock %}
 
@@ -56,36 +68,56 @@
     <div class="mode-card" onclick="selectMode('plan')" id="modePlan">
         <div class="mode-icon">📋</div>
         <div>
-            <div class="mode-title">Com Plano</div>
+            <div class="mode-title">COM PLANO</div>
             <div class="mode-sub">Selecione um plano pré-formulado com séries e cargas definidas</div>
         </div>
     </div>
     <div class="mode-card" onclick="selectMode('free')" id="modeFree">
         <div class="mode-icon">⚡</div>
         <div>
-            <div class="mode-title">Treino Avulso</div>
+            <div class="mode-title">TREINO AVULSO</div>
             <div class="mode-sub">Escolha grupos musculares e monte na hora</div>
         </div>
     </div>
 
-    <!-- Plan selection -->
+    <!-- ── Plan selection ── -->
     <div id="planSection" style="display:none; margin-top:20px;">
         <div class="section-header" style="margin-bottom:10px;">
             <span class="section-title">Escolha o plano</span>
         </div>
+
         {% if plans %}
             {% for plan in plans %}
-            <label class="plan-item" id="planOpt{{ plan.id }}">
-                <input type="radio" name="plan_choice" value="{{ plan.id }}" onchange="selectPlan({{ plan.id }})">
-                <div style="flex:1;">
-                    <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:0.9rem;">{{ plan.name }}</div>
-                    <div style="font-size:0.73rem; color:var(--text2); margin-top:2px;">{{ plan.plan_exercises|length }} exercícios</div>
+            <div class="plan-card-sel" id="planOpt{{ plan.id }}"
+                 onclick="selectPlan({{ plan.id }}, this)">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="flex:1;">
+                        <div class="plan-card-title">{{ plan.name }}</div>
+                        <div class="plan-card-meta">
+                            {{ plan.plan_exercises|length }} exercício{% if plan.plan_exercises|length != 1 %}s{% endif %}
+                            {% if plan.muscle_groups %}
+                            · {% for g in plan.muscle_groups %}{{ g.icon }}{% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span style="color:var(--text3); font-size:0.9rem;">›</span>
                 </div>
-                <span style="color:var(--text3);">›</span>
-            </label>
+
+                <!-- Exercise preview (hidden until selected) -->
+                <div class="ex-preview-grid" id="exPreview{{ plan.id }}" style="display:none;">
+                    {% for pe in plan.plan_exercises | sort(attribute='order') %}
+                    <div class="ex-preview-card">
+                        <div class="ex-preview-icon">{{ pe.exercise.muscle_group.icon }}</div>
+                        <div class="ex-preview-name">{{ pe.exercise.name }}</div>
+                        <div class="ex-preview-meta">{{ pe.sets }}× {{ pe.reps }} reps</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
             {% endfor %}
+
             <button onclick="startWithPlan()" id="btnStartPlan" disabled
-                class="btn btn-red btn-block btn-lg" style="margin-top:16px;">
+                class="btn btn-red btn-block btn-lg" style="margin-top:16px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:1px;">
                 ▶ INICIAR TREINO
             </button>
         {% else %}
@@ -97,12 +129,12 @@
         {% endif %}
     </div>
 
-    <!-- Free workout -->
+    <!-- ── Free workout ── -->
     <div id="freeSection" style="display:none; margin-top:20px;">
         <div class="section-header" style="margin-bottom:10px;">
             <span class="section-title">Grupos musculares</span>
         </div>
-        <div class="group-grid" id="groupGrid">
+        <div class="group-grid">
             {% for group in groups %}
             <div class="group-btn" onclick="toggleGroup({{ group.id }}, this)">
                 <span class="g-icon">{{ group.icon }}</span>
@@ -111,7 +143,7 @@
             {% endfor %}
         </div>
         <button onclick="startFree()" id="btnStartFree" disabled
-            class="btn btn-red btn-block btn-lg" style="margin-top:16px;">
+            class="btn btn-red btn-block btn-lg" style="margin-top:16px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:1px;">
             ▶ INICIAR TREINO AVULSO
         </button>
     </div>
@@ -130,23 +162,44 @@ function selectMode(mode) {
     document.getElementById('modePlan').classList.toggle('active', mode === 'plan');
     document.getElementById('modeFree').classList.toggle('active', mode === 'free');
 }
-function selectPlan(id) {
+
+function selectPlan(id, el) {
+    // Deselect all
+    document.querySelectorAll('.plan-card-sel').forEach(c => {
+        c.classList.remove('selected');
+        const preview = c.querySelector('[id^="exPreview"]');
+        if (preview) preview.style.display = 'none';
+    });
+
+    if (selectedPlanId === id) {
+        // Toggle off
+        selectedPlanId = null;
+        document.getElementById('btnStartPlan').disabled = true;
+        return;
+    }
+
+    // Select this one
     selectedPlanId = id;
-    document.querySelectorAll('.plan-item').forEach(el => el.classList.remove('selected'));
-    document.getElementById('planOpt' + id).classList.add('selected');
+    el.classList.add('selected');
+    const preview = document.getElementById('exPreview' + id);
+    if (preview) preview.style.display = 'grid';
     document.getElementById('btnStartPlan').disabled = false;
 }
+
 function startWithPlan() {
     if (selectedPlanId) window.location.href = '/live/' + selectedPlanId;
 }
+
 function toggleGroup(id, el) {
     const idx = selectedGroups.indexOf(id);
     if (idx === -1) { selectedGroups.push(id); el.classList.add('selected'); }
-    else { selectedGroups.splice(idx,1); el.classList.remove('selected'); }
+    else { selectedGroups.splice(idx, 1); el.classList.remove('selected'); }
     document.getElementById('btnStartFree').disabled = selectedGroups.length === 0;
 }
+
 function startFree() {
-    if (selectedGroups.length > 0) window.location.href = '/live/free?groups=' + selectedGroups.join(',');
+    if (selectedGroups.length > 0)
+        window.location.href = '/live/free?groups=' + selectedGroups.join(',');
 }
 </script>
 {% endblock %}
