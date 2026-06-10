@@ -268,8 +268,18 @@ def save_live():
         )
         db.session.add(se)
 
+    # Count how many exercises were actually saved
+    saved_count = SessionExercise.query.filter_by(session_id=ws.id).count()
+
+    if saved_count == 0:
+        # No exercises recorded — delete the session entirely
+        db.session.delete(ws)
+        db.session.commit()
+        flash('Nenhum exercício registrado. Treino não salvo.', 'info')
+        return redirect(url_for('history.start'))
+
     db.session.commit()
-    flash(f'Treino finalizado! Duração: {duration or "?"}min', 'success')
+    flash(f'Treino finalizado com {saved_count} exercício(s)! Duração: {duration or "?"}min', 'success')
     return redirect(url_for('history.index'))
 
 
