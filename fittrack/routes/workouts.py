@@ -131,7 +131,7 @@ def _call_cloudflare(pdf_bytes):
 
 def _analyze_pdf(pdf_bytes):
     errors = []
-    for name, fn in [('Gemini', _call_gemini), ('Groq', _call_groq), ('Cloudflare', _call_cloudflare)]:
+    for name, fn in [('Cloudflare', _call_cloudflare), ('Gemini', _call_gemini)]:
         try:
             planos = fn(pdf_bytes)
             if planos: return planos, name
