@@ -242,8 +242,9 @@
             </div>
             {% endif %}
 
-            <!-- Single OK button -->
-            <button onclick="showOverview()" class="btn btn-block" style="background:rgba(48,209,88,0.12); border:1.5px solid rgba(48,209,88,0.3); color:var(--success); border-radius:12px; padding:15px; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; cursor:pointer; margin-bottom:12px;">
+            <!-- OK button: save in real-time then return to overview -->
+            <button onclick="saveAndReturn({{ loop.index0 }})" class="btn btn-block"
+                style="background:rgba(48,209,88,0.12); border:1.5px solid rgba(48,209,88,0.3); color:var(--success); border-radius:12px; padding:15px; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; cursor:pointer; margin-bottom:12px;">
                 ✓ OK — RETORNAR AOS EXERCÍCIOS
             </button>
 
@@ -426,6 +427,47 @@ function startRest(sec) {
     }, 1000);
 }
 function skipRest() { clearInterval(restInt); document.getElementById('restOverlay').classList.remove('active'); }
+
+// ── Real-time save on OK ─────────────────────────────────────────────────────
+async function saveAndReturn(ei) {
+    const sessionId = document.querySelector('[name="session_id"]').value;
+    const exId = exerciseIds[ei];
+    if (!sessionId || !exId) { showOverview(); return; }
+
+    // Collect valid sets (weight + reps filled)
+    const rowCount = document.querySelectorAll('[id^="sr'+ei+'_"]').length;
+    let validSets = 0, lastWeight = null, lastReps = '';
+    for (let si = 0; si < rowCount; si++) {
+        const w = (document.getElementById('w'+ei+'_'+si)?.value || '').trim();
+        const r = (document.getElementById('r'+ei+'_'+si)?.value || '').trim();
+        if (w && r && !isNaN(parseFloat(w))) {
+            validSets++;
+            lastWeight = parseFloat(w);
+            lastReps = r;
+        }
+    }
+
+    if (validSets === 0) { showOverview(); return; }
+
+    try {
+        await fetch('/live/save-exercise', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                session_id: sessionId,
+                exercise_id: exId,
+                sets_done: validSets,
+                reps_done: lastReps,
+                weight_kg: lastWeight,
+                effort: efforts[ei] || null
+            })
+        });
+    } catch(e) {
+        console.error('Save error:', e);
+    }
+
+    showOverview();
+}
 
 // ── Finish ────────────────────────────────────────────────────────────────────
 function openFinish()  { document.getElementById('finishModal').classList.add('active'); }
