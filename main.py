@@ -1,63 +1,91 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitTrack — Cadastro</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --coral: #E8623A; --coral-dark: #C44E2A; --coral-pale: #FFF0EC; --dark: #1A1A1A; --border: #EBEBEB; }
-        body { font-family: 'DM Sans', sans-serif; background: #F7F5F3; min-height: 100vh; }
-        .topbar { background: var(--coral); color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
-        .topbar a { color: white; text-decoration: none; font-size: 1.3rem; }
-        .topbar h1 { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800; }
-        .form-wrap { padding: 24px 20px; max-width: 420px; margin: 0 auto; }
-        .form-group { margin-bottom: 16px; }
-        .form-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; color: #555; display: block; margin-bottom: 6px; text-transform: uppercase; }
-        .form-control { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--dark); background: white; outline: none; transition: border-color 0.15s; }
-        .form-control:focus { border-color: var(--coral); }
-        .btn-coral { width: 100%; padding: 15px; border-radius: 14px; background: var(--coral); color: white; font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800; border: none; cursor: pointer; }
-        .btn-coral:hover { background: var(--coral-dark); }
-        .footer-link { text-align: center; margin-top: 20px; font-size: 0.9rem; color: #888; }
-        .footer-link a { color: var(--coral); font-weight: 600; text-decoration: none; }
-        .alert { padding: 12px 16px; border-radius: 12px; font-size: 0.9rem; margin-bottom: 16px; }
-        .alert-error { background: #FEE; color: #E74C3C; border: 1px solid #FCC; }
-        .alert-success { background: #EFFFEF; color: #27AE60; }
-    </style>
-</head>
-<body>
-    <div class="topbar">
-        <a href="{{ url_for('auth.login') }}">←</a>
-        <h1>Criar Conta</h1>
-    </div>
-    <div class="form-wrap">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }}">{{ msg }}</div>{% endfor %}{% endif %}
-        {% endwith %}
-        <form method="POST">
-            <div class="form-group">
-                <label class="form-label">Nome</label>
-                <input type="text" name="name" class="form-control" placeholder="Seu nome" required autofocus>
-            </div>
-            <div class="form-group">
-                <label class="form-label">E-mail</label>
-                <input type="email" name="email" class="form-control" placeholder="seu@email.com" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Senha</label>
-                <input type="password" name="password" class="form-control" placeholder="Mínimo 6 caracteres" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Confirmar Senha</label>
-                <input type="password" name="confirm_password" class="form-control" placeholder="Repita a senha" required>
-            </div>
-            <button type="submit" class="btn-coral">Criar Conta</button>
-        </form>
-        <div class="footer-link">
-            Já tem conta? <a href="{{ url_for('auth.login') }}">Entrar</a>
-        </div>
-    </div>
-</body>
-</html>
+from flask import Blueprint, render_template
+from flask_login import login_required, current_user
+from models import WorkoutSession, WorkoutPlan, MuscleGroup
+from datetime import datetime, timedelta
+from app import db
+
+main_bp = Blueprint('main', __name__)
+
+
+@main_bp.route('/health')
+def health():
+    return 'ok', 200
+
+
+@main_bp.route('/')
+def index():
+    from flask_login import current_user
+    if current_user.is_authenticated:
+        return dashboard()
+    from flask import render_template
+    return render_template('auth/login.html')
+
+
+@main_bp.route('/dashboard')
+@login_required
+def dashboard():
+    today = datetime.utcnow().date()
+    week_start  = today - timedelta(days=today.weekday())
+    month_start = today.replace(day=1)
+
+    weekly_sessions = WorkoutSession.query.filter(
+        WorkoutSession.user_id == current_user.id,
+        WorkoutSession.date >= week_start
+    ).count()
+
+    monthly_sessions = WorkoutSession.query.filter(
+        WorkoutSession.user_id == current_user.id,
+        WorkoutSession.date >= month_start
+    ).count()
+
+    # Last 7 sessions with effective muscle groups
+    recent_sessions_raw = (
+        WorkoutSession.query
+        .filter_by(user_id=current_user.id)
+        .order_by(WorkoutSession.date.desc())
+        .limit(7).all()
+    )
+    recent_sessions = [
+        {'session': s, 'groups': s.effective_muscle_groups}
+        for s in recent_sessions_raw
+    ]
+
+    # All sessions for group analysis
+    all_sessions = (
+        WorkoutSession.query
+        .filter_by(user_id=current_user.id)
+        .order_by(WorkoutSession.date.desc())
+        .all()
+    )
+
+    # Muscle group last trained date
+    all_groups = MuscleGroup.query.all()
+    group_last_trained = {}
+    for s in all_sessions:
+        for mg in s.effective_muscle_groups:
+            if mg.id not in group_last_trained:
+                group_last_trained[mg.id] = s.date
+
+    group_suggestions = []
+    for g in all_groups:
+        last = group_last_trained.get(g.id)
+        days_ago = (today - last).days if last else None
+        group_suggestions.append({'group': g, 'last_date': last, 'days_ago': days_ago})
+    group_suggestions.sort(
+        key=lambda x: (x['days_ago'] is not None, -(x['days_ago'] or 9999))
+    )
+    top_suggestion = group_suggestions[0] if group_suggestions else None
+
+    # Plans ordered
+    all_plans = WorkoutPlan.query.filter_by(user_id=current_user.id)\
+        .order_by(WorkoutPlan.sort_order, WorkoutPlan.created_at).all()
+
+    return render_template('main/dashboard.html',
+                           weekly_sessions=weekly_sessions,
+                           monthly_sessions=monthly_sessions,
+                           recent_sessions=recent_sessions,
+                           group_suggestions=group_suggestions,
+                           top_suggestion=top_suggestion,
+                           all_groups=all_groups,
+                           all_plans=all_plans,
+                           today=today)
