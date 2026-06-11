@@ -273,7 +273,18 @@ function openExercise(idx) {
 }
 
 // ── Data detection → red dot + grid card ─────────────────────────────────────
+// Track which exercises the user actually interacted with
+const userTouched = new Set();
+
 function onDataInput(ei) {
+    // Mark as touched only when user actually types
+    userTouched.add(ei);
+    _updateDot(ei);
+}
+
+function _updateDot(ei) {
+    // Only mark red if user actually touched this exercise
+    if (!userTouched.has(ei)) return;
     const rowCount = document.querySelectorAll('[id^="sr'+ei+'_"]').length;
     let hasData = false;
     for (let si = 0; si < rowCount; si++) {
@@ -289,13 +300,12 @@ function onDataInput(ei) {
 // ── Auto-save reps as user types ──────────────────────────────────────────────
 let repsSaveTimer = {};
 function autoSaveRep(ei, si) {
+    userTouched.add(ei);
     const key = ei+'_'+si;
     clearTimeout(repsSaveTimer[key]);
     repsSaveTimer[key] = setTimeout(() => {
-        const w = document.getElementById('w'+ei+'_'+si)?.value || '';
         const r = document.getElementById('r'+ei+'_'+si)?.value || '';
         if (r && sessionId && exerciseIds[ei]) {
-            // Save immediately when reps are typed
             _saveExercise(ei);
         }
     }, 800);
@@ -345,7 +355,10 @@ async function _saveExercise(ei) {
 }
 
 async function saveAndReturn(ei) {
+    userTouched.add(ei);
     await _saveExercise(ei);
+    // Update grid card red after saving
+    _updateDot(ei);
     showOverview();
 }
 
