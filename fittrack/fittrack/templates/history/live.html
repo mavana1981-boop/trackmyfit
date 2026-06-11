@@ -3,288 +3,415 @@
 
 {% block topbar %}
 <div class="topbar">
-    <a href="{{ url_for('history.start') }}" class="topbar-back"
-       onclick="return confirm('Sair do treino?')">✕</a>
+    <a href="#" class="topbar-back" onclick="exitWorkout()">✕</a>
     <div style="flex:1; text-align:center;">
-        <div style="font-size:0.6rem; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; font-weight:700;">Ao vivo</div>
-        <h1 style="font-size:0.95rem; font-weight:800;">{{ plan_name }}</h1>
+        <div style="font-size:0.56rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Ao vivo</div>
+        <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px;">{{ plan_name }}</h1>
     </div>
-    <div id="timer" style="font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; color:var(--red); min-width:48px; text-align:right; letter-spacing:-0.5px;">0:00</div>
+    <div id="clock" style="font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--text2); min-width:58px; text-align:right; letter-spacing:1px;">00:00</div>
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-/* Nav dots */
-.ex-nav { display:flex; gap:5px; padding:10px 16px; overflow-x:auto; background:var(--bg2); border-bottom:1px solid var(--border); scrollbar-width:none; }
-.ex-nav::-webkit-scrollbar { display:none; }
-.ex-dot {
-    width:30px; height:30px; border-radius:50%; flex-shrink:0;
-    background:var(--bg4); border:1px solid var(--border);
-    font-family:'Syne',sans-serif; font-weight:800; font-size:0.7rem; color:var(--text2);
-    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.15s;
-}
-.ex-dot.active { background:var(--red); border-color:var(--red); color:white; }
-.ex-dot.done { border-color:var(--success); color:var(--success); }
+/* Overview grid */
+#overviewScreen { padding:16px; max-width:480px; margin:0 auto; padding-bottom:32px; }
+.ov-label { font-size:0.62rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+.ex-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.ex-grid-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:13px 11px; cursor:pointer; transition:all 0.15s; position:relative; }
+.ex-grid-card:active { transform:scale(0.96); }
+.ex-grid-card.has-data { border-color:var(--red); background:rgba(232,25,44,0.06); }
+.ex-grid-card.has-data::after { content:'✓'; position:absolute; top:8px; right:10px; font-family:'Bebas Neue',sans-serif; font-size:0.85rem; color:var(--red); }
+.gc-name { font-weight:700; font-size:0.82rem; line-height:1.3; margin-bottom:3px; }
+.gc-meta { font-size:0.66rem; color:var(--text2); }
+.gc-group { font-size:0.62rem; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
 
-/* Cards */
+/* Detail screen */
+#detailScreen { display:none; }
+.ex-nav { display:flex; gap:5px; padding:8px 16px; overflow-x:auto; background:var(--bg2); border-bottom:1px solid var(--border); scrollbar-width:none; }
+.ex-nav::-webkit-scrollbar { display:none; }
+.ex-dot { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:var(--bg4); border:1.5px solid var(--border2); font-family:'Bebas Neue',sans-serif; font-size:0.85rem; color:var(--text3); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+.ex-dot.active { background:var(--bg3); border-color:var(--text2); color:var(--text); }
+.ex-dot.has-data { background:var(--red); border-color:var(--red); color:white; }
+
 .ex-card { display:none; }
 .ex-card.active { display:block; }
 
-.ex-hero {
-    background:var(--bg3); border:1px solid var(--border);
-    border-radius:16px; padding:18px; margin-bottom:12px; position:relative; overflow:hidden;
-}
-.ex-hero::after { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background:var(--red-glow); }
-.ex-group { font-size:0.65rem; color:var(--red); font-weight:800; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px; }
-.ex-name { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:800; line-height:1.1; margin-bottom:10px; position:relative; z-index:1; }
-.ex-meta { display:flex; gap:6px; flex-wrap:wrap; position:relative; z-index:1; }
+.ex-hero { background:var(--bg3); border:1px solid var(--border); border-radius:13px; padding:16px; margin-bottom:10px; }
+.ex-group-lbl { font-size:0.58rem; color:var(--red); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+.ex-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.5px; line-height:1.1; margin-bottom:8px; }
+.ex-badges { display:flex; gap:5px; flex-wrap:wrap; }
 
 /* Sets */
-.sets-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:12px; }
-.sets-head { display:grid; grid-template-columns:28px 1fr 1fr 40px; gap:4px; padding:8px 14px; background:var(--bg4); border-bottom:1px solid var(--border); }
-.sets-head span { font-family:'Syne',sans-serif; font-size:0.6rem; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; text-align:center; }
-.set-row { display:grid; grid-template-columns:28px 1fr 1fr 40px; gap:4px; padding:8px 14px; border-bottom:1px solid var(--border); align-items:center; transition:background 0.15s; }
+.sets-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:10px; }
+.sets-head { display:grid; grid-template-columns:28px 1fr 1fr 36px; gap:4px; padding:7px 12px; background:var(--bg4); border-bottom:1px solid var(--border); }
+.sets-head span { font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; text-align:center; }
+.set-row { display:grid; grid-template-columns:28px 1fr 1fr 36px; gap:4px; padding:7px 12px; border-bottom:1px solid var(--border); align-items:center; }
 .set-row:last-child { border-bottom:none; }
-.set-row.done-row { background:rgba(48,209,88,0.04); }
-.set-num { font-family:'Syne',sans-serif; font-weight:800; font-size:0.8rem; color:var(--text2); text-align:center; }
-.set-input {
-    background:var(--bg5); border:1px solid var(--border2); border-radius:8px;
-    color:var(--text); font-size:0.92rem; font-weight:700; font-family:'Syne',sans-serif;
-    text-align:center; padding:8px 4px; width:100%; outline:none; transition:border-color 0.15s;
-}
-.set-input:focus { border-color:var(--red); }
-.set-check {
-    background:var(--bg5); border:1px solid var(--border2); border-radius:8px;
-    color:var(--text3); font-size:1rem; padding:7px 0; cursor:pointer;
-    width:100%; transition:all 0.15s; display:flex; align-items:center; justify-content:center;
-}
-.set-check.done { background:rgba(48,209,88,0.12); border-color:rgba(48,209,88,0.3); color:var(--success); }
+.set-row.done-row { background:rgba(232,25,44,0.04); }
+.set-num { font-family:'Bebas Neue',sans-serif; font-size:0.88rem; color:var(--text3); text-align:center; }
+.set-inp-wrap { position:relative; }
+.set-inp { background:var(--bg4); border:1px solid var(--border2); border-radius:7px; color:var(--text); font-size:0.9rem; font-weight:700; text-align:center; padding:8px 3px; width:100%; outline:none; transition:border-color 0.15s; }
+.set-inp:focus { border-color:var(--red); }
+.suggest-lbl { position:absolute; bottom:-13px; left:0; right:0; text-align:center; font-size:0.5rem; color:var(--text3); white-space:nowrap; font-style:italic; }
+.set-check { background:var(--bg4); border:1px solid var(--border2); border-radius:7px; color:var(--text3); font-size:0.9rem; padding:7px 0; cursor:pointer; width:100%; transition:all 0.15s; display:flex; align-items:center; justify-content:center; }
+.set-check.done { background:rgba(232,25,44,0.1); border-color:rgba(232,25,44,0.3); color:var(--red); }
+.add-set-btn { display:flex; align-items:center; justify-content:center; gap:6px; padding:8px; background:var(--bg4); color:var(--text2); font-size:0.76rem; font-weight:700; border:none; cursor:pointer; width:100%; text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid var(--border); transition:all 0.15s; }
+.add-set-btn:hover { color:var(--red); }
 
-/* Load adjust */
-.load-section { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; }
-.load-label { font-family:'Syne',sans-serif; font-size:0.65rem; font-weight:800; color:var(--text2); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:10px; }
-.load-btns { display:grid; grid-template-columns:repeat(3,1fr) 2px repeat(3,1fr); gap:6px; align-items:center; }
-.load-btn {
-    background:var(--bg4); border:1px solid var(--border);
-    border-radius:8px; color:var(--text2); font-family:'Syne',sans-serif;
-    font-weight:800; font-size:0.75rem; padding:10px 4px;
-    cursor:pointer; transition:all 0.15s; text-align:center;
-}
-.load-btn.minus { color:var(--danger); border-color:rgba(255,69,58,0.2); }
-.load-btn.plus { color:var(--success); border-color:rgba(48,209,88,0.2); }
-.load-btn:active { transform:scale(0.95); }
-.load-sep { background:var(--border); height:32px; border-radius:2px; }
+/* History table */
+.hist-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:10px; }
+.hist-card-head { padding:10px 14px; background:var(--bg4); border-bottom:1px solid var(--border); font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
+.hist-table { width:100%; border-collapse:collapse; }
+.hist-table th { font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; padding:4px 8px; text-align:center; border-bottom:1px solid var(--border); }
+.hist-table td { font-size:0.78rem; padding:7px 8px; text-align:center; border-bottom:1px solid var(--border); }
+.hist-table tr:last-child td { border-bottom:none; }
+.hist-table td.d { color:var(--text2); font-size:0.7rem; text-align:left; padding-left:12px; }
+.hist-table td.w { font-family:'Bebas Neue',sans-serif; font-size:0.92rem; color:var(--red); }
 
-/* History chart */
-.hist-section { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; }
-.hist-bars { display:flex; align-items:flex-end; gap:5px; height:52px; margin:10px 0 6px; }
-.hist-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
-.hist-bar { width:100%; background:var(--red); border-radius:3px 3px 0 0; min-height:3px; }
-.hist-val { font-family:'Syne',sans-serif; font-size:0.58rem; font-weight:800; color:var(--text2); }
-.hist-date { font-size:0.55rem; color:var(--text3); }
-.hist-last { font-size:0.75rem; color:var(--text2); }
-.hist-last strong { color:var(--text); font-family:'Syne',sans-serif; }
+/* Coach notes */
+.coach-notes { background:rgba(232,25,44,0.05); border-left:2px solid var(--red); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:10px; font-size:0.8rem; color:var(--text2); line-height:1.5; }
+.coach-notes-lbl { font-size:0.56rem; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; }
 
-/* Rest overlay */
-.rest-overlay {
-    display:none; position:fixed; inset:0;
-    background:rgba(0,0,0,0.88); z-index:200;
-    flex-direction:column; align-items:center; justify-content:center; gap:18px;
-}
-.rest-overlay.active { display:flex; }
-.rest-ring {
-    width:140px; height:140px; border-radius:50%;
-    border:3px solid var(--red); background:var(--bg3);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    box-shadow:0 0 30px var(--red-glow);
-}
-.rest-num { font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; color:var(--red); line-height:1; }
-.rest-lbl { font-size:0.7rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+/* OK button */
+.ok-btn { width:100%; padding:14px; background:rgba(48,209,88,0.1); border:1.5px solid rgba(48,209,88,0.3); color:var(--success); border-radius:11px; font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px; cursor:pointer; margin-bottom:10px; transition:all 0.15s; }
+.ok-btn:active { transform:scale(0.98); }
+
+/* Finish modal */
+.finish-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:300; flex-direction:column; overflow-y:auto; }
+.finish-modal.active { display:flex; }
+.finish-inner { background:var(--bg2); border-radius:18px 18px 0 0; padding:24px 20px 48px; margin-top:auto; border-top:1px solid var(--border); }
+.group-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+.group-chip { display:inline-flex; align-items:center; gap:4px; background:var(--bg4); border:1.5px solid var(--border); border-radius:8px; padding:7px 11px; cursor:pointer; transition:all 0.15s; font-weight:700; font-size:0.74rem; color:var(--text2); user-select:none; text-transform:uppercase; letter-spacing:0.3px; }
+.group-chip.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Dot navigation -->
-<div class="ex-nav" id="exNav">
-    {% for ex in exercises %}
-    <div class="ex-dot {% if loop.first %}active{% endif %}" id="dot{{ loop.index0 }}" onclick="goTo({{ loop.index0 }})">{{ loop.index }}</div>
-    {% endfor %}
+
+<!-- SCREEN 1: Overview -->
+<div id="overviewScreen">
+    <div class="ov-label">Selecione o exercício</div>
+    <div class="ex-grid" id="exGrid">
+        {% for ex in exercises %}
+        <div class="ex-grid-card" id="gc{{ loop.index0 }}" onclick="openExercise({{ loop.index0 }})">
+            <div class="gc-group">{{ ex.muscle_group.name }}</div>
+            <div class="gc-name">{{ ex.name }}</div>
+            <div class="gc-meta">{{ ex.sets }}× {{ ex.reps }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <div style="margin-top:16px;">
+        <button onclick="openFinish()" class="btn btn-red btn-block"
+            style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px;">
+            Finalizar Treino
+        </button>
+    </div>
 </div>
 
-<div class="content" style="padding-top:14px;">
+<!-- SCREEN 2: Exercise detail -->
+<div id="detailScreen">
+    <div class="ex-nav" id="exNav">
+        {% for ex in exercises %}
+        <div class="ex-dot" id="dot{{ loop.index0 }}" onclick="openExercise({{ loop.index0 }})">{{ loop.index }}</div>
+        {% endfor %}
+    </div>
 
-    {% for ex in exercises %}
-    <div class="ex-card {% if loop.first %}active{% endif %}" id="ex{{ loop.index0 }}">
+    <div style="padding:12px 16px 80px; max-width:480px; margin:0 auto;">
+        {% for ex in exercises %}
+        <div class="ex-card" id="ex{{ loop.index0 }}">
 
-        <!-- Hero -->
-        <div class="ex-hero">
-            <div class="ex-group">{{ ex.muscle_group.icon }} {{ ex.muscle_group.name }}</div>
-            <div class="ex-name">{{ ex.name }}</div>
-            <div class="ex-meta">
-                <span class="badge badge-muted">{{ ex.sets }}× séries</span>
-                <span class="badge badge-muted">{{ ex.reps }} reps</span>
-                {% if ex.weight %}<span class="badge badge-red" id="curW{{ loop.index0 }}">{{ ex.weight }}kg</span>{% endif %}
-                <span class="badge badge-muted">{{ ex.rest_seconds }}s descanso</span>
+            <div class="ex-hero">
+                <div class="ex-group-lbl">{{ ex.muscle_group.name }}</div>
+                <div class="ex-title">{{ ex.name }}</div>
+                <div class="ex-badges">
+                    <span class="badge badge-muted">{{ ex.sets }} séries</span>
+                    <span class="badge badge-muted">{{ ex.reps }} reps</span>
+                    {% if ex.weight %}<span class="badge badge-red">{{ ex.weight }}kg</span>{% endif %}
+                </div>
             </div>
+
+            {% if ex.coach_notes %}
+            <div class="coach-notes">
+                <div class="coach-notes-lbl">Instruções</div>
+                {{ ex.coach_notes }}
+            </div>
+            {% endif %}
+
+            <!-- Dynamic sets table -->
+            <div class="sets-card">
+                <div class="sets-head">
+                    <span>#</span><span>Kg</span><span>Reps</span><span>✓</span>
+                </div>
+                <div id="setsBody{{ loop.index0 }}">
+                    {% if ex.series_data %}
+                        {% set series = ex.series_data | fromjson %}
+                        {% for s in series %}
+                        <div class="set-row" id="sr{{ loop.index0 }}_{{ loop.index0 }}{{ loop.index0 }}{{ loop.index }}">
+                            <div class="set-num">{{ loop.index }}</div>
+                            <div class="set-inp-wrap">
+                                <input class="set-inp" type="number" step="0.5" min="0"
+                                    id="w{{ loop.index0 }}_{{ loop.index - 1 }}"
+                                    value="{{ ex.weight or '' }}" placeholder="—"
+                                    oninput="trackChange({{ loop.index0 }}, {{ loop.index - 1 }})">
+                                {% if ex.suggest_increase and loop.first %}
+                                <div class="suggest-lbl">cogite aumentar peso</div>
+                                {% endif %}
+                            </div>
+                            <input class="set-inp" type="text"
+                                id="r{{ loop.index0 }}_{{ loop.index - 1 }}"
+                                value="{{ s.reps }}" placeholder="—"
+                                oninput="trackChange({{ loop.index0 }}, {{ loop.index - 1 }})">
+                            <button class="set-check" onclick="checkSet({{ loop.index0 }}, {{ loop.index - 1 }})">✓</button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        {% for s in range(ex.sets) %}
+                        <div class="set-row" id="sr{{ loop.index0 }}_{{ s }}">
+                            <div class="set-num">{{ s+1 }}</div>
+                            <div class="set-inp-wrap">
+                                <input class="set-inp" type="number" step="0.5" min="0"
+                                    id="w{{ loop.index0 }}_{{ s }}"
+                                    value="{{ ex.weight or '' }}" placeholder="—"
+                                    oninput="trackChange({{ loop.index0 }}, {{ s }})">
+                                {% if ex.suggest_increase and s == 0 %}
+                                <div class="suggest-lbl">cogite aumentar peso</div>
+                                {% endif %}
+                            </div>
+                            <input class="set-inp" type="text"
+                                id="r{{ loop.index0 }}_{{ s }}"
+                                value="{{ ex.reps }}" placeholder="—"
+                                oninput="trackChange({{ loop.index0 }}, {{ s }})">
+                            <button class="set-check" onclick="checkSet({{ loop.index0 }}, {{ s }})">✓</button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <button class="add-set-btn" onclick="addSet({{ loop.index0 }})">+ Adicionar série</button>
+            </div>
+
+            <!-- History -->
+            {% if ex.history %}
+            <div class="hist-card">
+                <div class="hist-card-head">Histórico</div>
+                <table class="hist-table">
+                    <thead><tr><th style="text-align:left; padding-left:12px;">Data</th><th>Kg</th><th>Reps</th></tr></thead>
+                    <tbody>
+                        {% set seen = namespace(dates=[]) %}
+                        {% for h in ex.history | reverse %}
+                        {% set ds = h.session.date.strftime('%d/%m/%y') %}
+                        <tr>
+                            <td class="d">{% if ds not in seen.dates %}{{ ds }}{% set _ = seen.dates.append(ds) %}{% endif %}</td>
+                            <td class="w">{{ h.weight_kg or '—' }}{% if h.weight_kg %}kg{% endif %}</td>
+                            <td>{{ h.reps_done or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <button class="ok-btn" onclick="saveAndReturn({{ loop.index0 }})">
+                ✓ OK — Retornar aos exercícios
+            </button>
+
         </div>
+        {% endfor %}
+    </div>
+</div>
 
-        <!-- Sets -->
-        <div class="sets-wrap">
-            <div class="sets-head">
-                <span>#</span><span>Kg</span><span>Reps</span><span>✓</span>
-            </div>
-            {% for s in range(ex.sets) %}
-            <div class="set-row" id="sr{{ loop.index0 }}_{{ s }}">
-                <div class="set-num">{{ s+1 }}</div>
-                <input class="set-input" type="number" step="0.5" min="0"
-                    id="w{{ loop.index0 }}_{{ s }}" value="{{ ex.weight or '' }}" placeholder="—">
-                <input class="set-input" type="text"
-                    id="r{{ loop.index0 }}_{{ s }}" value="{{ ex.reps }}" placeholder="—">
-                <button class="set-check" onclick="checkSet({{ loop.index0 }},{{ s }},{{ ex.rest_seconds }})">✓</button>
-            </div>
-            {% endfor %}
+<!-- Submit form -->
+<form method="POST" action="{{ url_for('history.save_live') }}" id="finishForm" style="display:none;">
+    <input type="hidden" name="session_id" id="formSessionId" value="{{ session_id }}">
+    <input type="hidden" name="plan_id" value="{{ plan_id or '' }}">
+    <input type="hidden" name="duration" id="finalDuration">
+    <input type="hidden" name="custom_name" id="finalName">
+    <input type="hidden" name="exercise_data" id="exerciseData">
+    <input type="hidden" name="exercise_ids_json" value="{{ exercise_ids_json|safe }}">
+    <div id="groupInputs"></div>
+</form>
+
+<!-- Finish modal -->
+<div class="finish-modal" id="finishModal">
+    <div class="finish-inner">
+        <div style="font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:1px; margin-bottom:4px;">Finalizar Treino</div>
+        <div style="font-size:0.76rem; color:var(--text2); margin-bottom:18px;">Revise antes de salvar</div>
+        <div class="form-group">
+            <label class="form-label">Nome do treino (opcional)</label>
+            <input type="text" id="customName" class="form-control"
+                placeholder="{{ plan_name }}"
+                value="{{ plan_name if plan_name != 'Treino Avulso' else '' }}">
         </div>
-
-        <!-- Load adjust -->
-        <div class="load-section">
-            <div class="load-label">Ajustar Carga</div>
-            <div class="load-btns">
-                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-10)">−10%</button>
-                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-5)">−5%</button>
-                <button class="load-btn minus" onclick="adj({{ loop.index0 }},-1)">−1%</button>
-                <div class="load-sep"></div>
-                <button class="load-btn plus" onclick="adj({{ loop.index0 }},1)">+1%</button>
-                <button class="load-btn plus" onclick="adj({{ loop.index0 }},5)">+5%</button>
-                <button class="load-btn plus" onclick="adj({{ loop.index0 }},10)">+10%</button>
-            </div>
-        </div>
-
-        <!-- History -->
-        {% if ex.history %}
-        <div class="hist-section">
-            <div class="load-label">Histórico de Carga</div>
-            {% set max_w = namespace(val=0.1) %}
-            {% for h in ex.history %}{% if h.weight_kg and h.weight_kg > max_w.val %}{% set max_w.val = h.weight_kg %}{% endif %}{% endfor %}
-            <div class="hist-bars">
-                {% for h in ex.history %}
-                <div class="hist-bar-col">
-                    <div class="hist-bar" style="height:{{ ((h.weight_kg or 0)/max_w.val*48)|int }}px;"></div>
-                    <div class="hist-val">{{ h.weight_kg or '—' }}</div>
-                    <div class="hist-date">{{ h.date.strftime('%d/%m') }}</div>
+        <div class="form-group">
+            <label class="form-label">Grupos musculares treinados</label>
+            <div class="group-chips">
+                {% for g in all_groups %}
+                <div class="group-chip {% if g.id in selected_group_ids %}sel{% endif %}"
+                     data-id="{{ g.id }}" onclick="this.classList.toggle('sel')">
+                    {{ g.name }}
                 </div>
                 {% endfor %}
             </div>
-            <div class="hist-last">Última: <strong>{{ ex.history[-1].weight_kg or '—' }}kg × {{ ex.history[-1].reps_done or '—' }} reps</strong></div>
         </div>
-        {% endif %}
-
-        <!-- Nav -->
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-            {% if not loop.first %}
-            <button onclick="goTo({{ loop.index0-1 }})" class="btn btn-ghost" style="flex:1;">← Anterior</button>
-            {% endif %}
-            {% if not loop.last %}
-            <button onclick="goTo({{ loop.index0+1 }})" class="btn btn-red" style="flex:1;">Próximo →</button>
-            {% else %}
-            <button onclick="finish()" class="btn btn-success" style="flex:1; font-size:0.95rem;">🏁 FINALIZAR</button>
-            {% endif %}
+        <div style="display:flex; gap:8px; margin-top:18px;">
+            <button onclick="closeFinish()" class="btn btn-ghost" style="flex:1;">Continuar</button>
+            <button onclick="submitFinish()" class="btn btn-red" style="flex:1; font-family:'Bebas Neue',sans-serif; font-size:0.95rem;">Salvar</button>
         </div>
-
     </div>
-    {% endfor %}
-
-    <!-- Submit form -->
-    <form method="POST" action="{{ url_for('history.save_live') }}" id="finishForm" style="display:none;">
-        <input type="hidden" name="plan_id" value="{{ plan_id or '' }}">
-        <input type="hidden" name="duration" id="finalDuration">
-        <input type="hidden" name="exercise_data" id="exerciseData">
-        <input type="hidden" name="exercise_ids_json" value="{{ exercise_ids_json|safe }}">
-    </form>
-</div>
-
-<!-- Rest overlay -->
-<div class="rest-overlay" id="restOverlay">
-    <div class="rest-ring">
-        <div class="rest-num" id="restNum">60</div>
-        <div class="rest-lbl">Descanso</div>
-    </div>
-    <p style="color:var(--text2); font-size:0.82rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Prepare-se para a próxima série</p>
-    <button onclick="skipRest()" class="btn btn-ghost">Pular</button>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const exerciseIds = {{ exercise_ids_json|safe }};
-let current = 0;
-let t0 = Date.now();
-let restInt = null;
-setInterval(() => {
-    const s = Math.floor((Date.now()-t0)/1000);
-    document.getElementById('timer').textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-}, 1000);
+const exerciseIds       = {{ exercise_ids_json|safe }};
+let   sessionId         = '{{ session_id }}';
+const planIdForSession  = {{ plan_id_for_session or 'null' }};
+const groupIdsForSession = {{ group_ids_for_session|tojson }};
+// Track which set inputs user actually changed
+const changed = {}; // "ei_si" -> true
 
-function goTo(i) {
-    document.querySelectorAll('.ex-card').forEach(c=>c.classList.remove('active'));
-    document.querySelectorAll('.ex-dot').forEach(d=>d.classList.remove('active'));
-    document.getElementById('ex'+i).classList.add('active');
-    document.getElementById('dot'+i).classList.add('active');
-    current = i;
-    document.getElementById('dot'+i).scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+// Clock
+function updateClock() {
+    const n = new Date();
+    document.getElementById('clock').textContent =
+        String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+}
+updateClock(); setInterval(updateClock, 10000);
+
+// Screen switching
+function showOverview() {
+    document.getElementById('overviewScreen').style.display = 'block';
+    document.getElementById('detailScreen').style.display = 'none';
+}
+function openExercise(idx) {
+    document.getElementById('overviewScreen').style.display = 'none';
+    document.getElementById('detailScreen').style.display = 'block';
+    document.querySelectorAll('.ex-dot').forEach(d => d.classList.remove('active'));
+    document.querySelectorAll('.ex-card').forEach(c => c.classList.remove('active'));
+    document.getElementById('dot'+idx).classList.add('active');
+    document.getElementById('ex'+idx).classList.add('active');
+    document.getElementById('dot'+idx).scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
 }
 
-function checkSet(ei, si, rest) {
+// Track field changes
+function trackChange(ei, si) {
+    changed[ei+'_'+si] = true;
+}
+
+// Check set ✓
+function checkSet(ei, si) {
     const btn = document.querySelector('#sr'+ei+'_'+si+' .set-check');
     const row = document.getElementById('sr'+ei+'_'+si);
-    const done = btn.classList.toggle('done');
-    row.classList.toggle('done-row', done);
-    // Mark dot done if all sets checked
-    const all = document.querySelectorAll('[id^="sr'+ei+'_"]');
-    if ([...all].every(r=>r.querySelector('.set-check').classList.contains('done'))) {
-        const dot = document.getElementById('dot'+ei);
-        dot.classList.remove('active'); dot.classList.add('done'); dot.textContent='✓';
-    }
-    if (done && rest > 0) startRest(rest);
+    btn.classList.toggle('done');
+    row.classList.toggle('done-row');
 }
 
-function startRest(sec) {
-    let r = sec;
-    document.getElementById('restNum').textContent = r;
-    document.getElementById('restOverlay').classList.add('active');
-    if (restInt) clearInterval(restInt);
-    restInt = setInterval(()=>{ r--; document.getElementById('restNum').textContent=r; if(r<=0) skipRest(); },1000);
+// Add new set row dynamically
+function addSet(ei) {
+    const body = document.getElementById('setsBody'+ei);
+    const rows = body.querySelectorAll('.set-row');
+    const si = rows.length;
+    // Get last weight as default
+    const lastW = document.getElementById('w'+ei+'_'+(si-1))?.value || '';
+    const lastR = document.getElementById('r'+ei+'_'+(si-1))?.value || '';
+    const div = document.createElement('div');
+    div.className = 'set-row';
+    div.id = 'sr'+ei+'_'+si;
+    div.innerHTML = `
+        <div class="set-num">${si+1}</div>
+        <div class="set-inp-wrap">
+            <input class="set-inp" type="number" step="0.5" min="0"
+                id="w${ei}_${si}" value="${lastW}" placeholder="—"
+                oninput="trackChange(${ei}, ${si})">
+        </div>
+        <input class="set-inp" type="text"
+            id="r${ei}_${si}" value="${lastR}" placeholder="—"
+            oninput="trackChange(${ei}, ${si})">
+        <button class="set-check" onclick="checkSet(${ei}, ${si})">✓</button>
+    `;
+    body.appendChild(div);
+    // Mark as changed since user explicitly added it
+    changed[ei+'_'+si] = true;
 }
-function skipRest() { clearInterval(restInt); document.getElementById('restOverlay').classList.remove('active'); }
 
-function adj(ei, pct) {
+// Collect all sets for an exercise
+function collectSets(ei) {
     const rows = document.querySelectorAll('[id^="sr'+ei+'_"]');
-    rows.forEach((_,si)=>{
-        const inp = document.getElementById('w'+ei+'_'+si);
-        const cur = parseFloat(inp.value)||0;
-        if (cur===0) return;
-        inp.value = (Math.round(cur*(1+pct/100)*2)/2).toFixed(1);
+    const sets = [];
+    rows.forEach((_, si) => {
+        const w = document.getElementById('w'+ei+'_'+si)?.value?.trim() || '';
+        const r = document.getElementById('r'+ei+'_'+si)?.value?.trim() || '';
+        const isChanged = changed[ei+'_'+si];
+        if (r && isChanged) {
+            sets.push({ weight: w ? parseFloat(w) : null, reps: r });
+        }
     });
+    return sets;
 }
 
-function finish() {
-    if (!confirm('Finalizar o treino?')) return;
-    const mins = Math.floor((Date.now()-t0)/1000/60);
-    document.getElementById('finalDuration').value = mins;
-    const data = [];
-    document.querySelectorAll('.ex-card').forEach((card,ei)=>{
-        const sets = [];
-        document.querySelectorAll('[id^="sr'+ei+'_"]').forEach((_,si)=>{
-            const row = document.getElementById('sr'+ei+'_'+si);
-            sets.push({
-                weight: document.getElementById('w'+ei+'_'+si)?.value||'',
-                reps: document.getElementById('r'+ei+'_'+si)?.value||'',
-                done: row?.querySelector('.set-check')?.classList.contains('done')||false
-            });
+// Save exercise in real-time
+async function _saveExercise(ei) {
+    const exId = exerciseIds[ei];
+    if (!sessionId || !exId) return false;
+    const sets = collectSets(ei);
+    if (!sets.length) return false;
+    try {
+        const resp = await fetch('/live/save-exercise', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                session_id: sessionId,
+                exercise_id: exId,
+                sets,
+                plan_id_for_session: planIdForSession,
+                group_ids_for_session: groupIdsForSession
+            })
         });
-        data.push({ex_idx:ei,sets});
+        const data = await resp.json();
+        if (data.ok && data.session_id) {
+            sessionId = String(data.session_id); // Update from 'pending' to real ID
+        }
+        return data.ok === true;
+    } catch(e) { return false; }
+}
+
+async function saveAndReturn(ei) {
+    const saved = await _saveExercise(ei);
+    if (saved) {
+        document.getElementById('dot'+ei).classList.add('has-data');
+        const gc = document.getElementById('gc'+ei);
+        if (gc) gc.classList.add('has-data');
+    }
+    showOverview();
+}
+
+// Exit
+async function exitWorkout() {
+    const hasSaved = document.querySelectorAll('.ex-dot.has-data').length > 0;
+    const msg = hasSaved ? 'Sair? Os exercícios marcados já foram salvos.' : 'Sair? Nenhum exercício registrado — treino será cancelado.';
+    if (!confirm(msg)) return;
+    if (sessionId && sessionId !== 'pending') {
+        try { await fetch('/live/cancel/' + sessionId, {method:'POST'}); } catch(e) {}
+    }
+    window.location.href = '{{ url_for("history.start") }}';
+}
+
+// Finish
+function openFinish()  { document.getElementById('finishModal').classList.add('active'); }
+function closeFinish() { document.getElementById('finishModal').classList.remove('active'); }
+
+function submitFinish() {
+    document.getElementById('formSessionId').value = sessionId;
+    document.getElementById('finalDuration').value = '';
+    document.getElementById('finalName').value = document.getElementById('customName').value;
+    const gi = document.getElementById('groupInputs');
+    gi.innerHTML = '';
+    document.querySelectorAll('.group-chip.sel').forEach(chip => {
+        const inp = document.createElement('input');
+        inp.type='hidden'; inp.name='muscle_group_ids'; inp.value=chip.dataset.id;
+        gi.appendChild(inp);
     });
-    document.getElementById('exerciseData').value = JSON.stringify(data);
+    document.getElementById('exerciseData').value = '[]';
     document.getElementById('finishForm').submit();
 }
 </script>
