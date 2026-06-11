@@ -5,15 +5,14 @@ from models import WorkoutSession, SessionExercise, WorkoutPlan, PlanExercise, E
 from datetime import datetime, timezone, timedelta
 import json
 
-def _today_brazil():
-    """Return today's date in Brazil timezone (UTC-3)."""
-    return (datetime.now(timezone.utc) - timedelta(hours=3)).date()
-
 history_bp = Blueprint('history', __name__)
 
 
+def _today_brazil():
+    return (datetime.now(timezone.utc) - timedelta(hours=3)).date()
+
+
 def _exercise_history(user_id, exercise_id, limit=10):
-    """Last N sessions for this exercise — ANY registration (weight optional)."""
     return (
         db.session.query(SessionExercise)
         .join(WorkoutSession)
@@ -24,20 +23,17 @@ def _exercise_history(user_id, exercise_id, limit=10):
         .order_by(WorkoutSession.date.desc())
         .limit(limit)
         .all()
-    )[::-1]  # oldest first for chart
+    )[::-1]
 
 
 def _should_suggest_increase(history):
-    """Return True if last 4 entries all have the same weight (non-null)."""
     weights = [h.weight_kg for h in history if h.weight_kg is not None]
     if len(weights) < 4:
         return False
-    last4 = weights[-4:]
-    return len(set(last4)) == 1
+    return len(set(weights[-4:])) == 1
 
 
 def _attach_muscle_groups(session, group_ids):
-    """Set explicit muscle groups on a session from a list of IDs."""
     session.muscle_groups = []
     for gid in group_ids:
         mg = MuscleGroup.query.get(gid)
@@ -125,18 +121,23 @@ def live(plan_id):
             e.sets = 3
             e.reps = '10-12'
             e.rest_seconds = 60
-            e.weight = None
             e.pe_id = None
+            last = (
+                db.session.query(SessionExercise)
+                .join(WorkoutSession)
+                .filter(WorkoutSession.user_id == current_user.id,
+                        SessionExercise.exercise_id == ex.id,
+                        SessionExercise.weight_kg.isnot(None))
+                .order_by(WorkoutSession.date.desc()).first()
+            )
+            e.weight = last.weight_kg if last else None
             # Look up coach notes from any plan exercise for this user
-            from models import PlanExercise as PE, WorkoutPlan as WP
             pe_with_notes = (
-                db.session.query(PE)
-                .join(WP, PE.plan_id == WP.id)
-                .filter(
-                    WP.user_id == current_user.id,
-                    PE.exercise_id == ex.id,
-                    PE.notes.isnot(None)
-                )
+                db.session.query(PlanExercise)
+                .join(WorkoutPlan, PlanExercise.plan_id == WorkoutPlan.id)
+                .filter(WorkoutPlan.user_id == current_user.id,
+                        PlanExercise.exercise_id == ex.id,
+                        PlanExercise.notes.isnot(None))
                 .first()
             )
             e.coach_notes = pe_with_notes.notes if pe_with_notes else ''
@@ -150,7 +151,6 @@ def live(plan_id):
             id=int(plan_id), user_id=current_user.id).first_or_404()
         plan_name = plan.name
         plan_id_val = plan.id
-        # Infer group IDs from plan exercises
         for pe in sorted(plan.plan_exercises, key=lambda x: x.order):
             gid = pe.exercise.muscle_group_id
             if gid not in selected_group_ids:
@@ -158,13 +158,10 @@ def live(plan_id):
             last = (
                 db.session.query(SessionExercise)
                 .join(WorkoutSession)
-                .filter(
-                    WorkoutSession.user_id == current_user.id,
-                    SessionExercise.exercise_id == pe.exercise_id,
-                    SessionExercise.weight_kg.isnot(None)
-                )
-                .order_by(WorkoutSession.date.desc())
-                .first()
+                .filter(WorkoutSession.user_id == current_user.id,
+                        SessionExercise.exercise_id == pe.exercise_id,
+                        SessionExercise.weight_kg.isnot(None))
+                .order_by(WorkoutSession.date.desc()).first()
             )
             e = ExData()
             e.id = pe.exercise_id
@@ -173,14 +170,14 @@ def live(plan_id):
             e.sets = pe.sets
             e.reps = pe.reps
             e.rest_seconds = pe.rest_seconds
-            e.weight = pe.suggested_weight if pe.suggested_weight else (last.weight_kg if last else None)
             e.pe_id = pe.id
+            e.weight = pe.suggested_weight if pe.suggested_weight else (last.weight_kg if last else None)
             e.coach_notes = pe.notes or ''
             e.history = _exercise_history(current_user.id, pe.exercise_id)
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
 
-    # ── Create session immediately on load ────────────────────────────────────
+    # Create session immediately
     ws = WorkoutSession(
         user_id=current_user.id,
         plan_id=plan_id_val,
@@ -191,11 +188,9 @@ def live(plan_id):
     _attach_muscle_groups(ws, selected_group_ids)
     db.session.commit()
     session_id = ws.id
-    # ─────────────────────────────────────────────────────────────────────────
 
     import json as _json
     exercise_ids_json = _json.dumps([e.id for e in exercises])
-    # Map exercise_id -> plan_exercise_id for suggest-weight API
     pe_ids_json = _json.dumps([getattr(e, 'pe_id', None) for e in exercises])
     plan_id_int = plan_id_val
     all_groups = MuscleGroup.query.all()
@@ -212,22 +207,16 @@ def live(plan_id):
                            selected_group_ids=selected_group_ids)
 
 
-# ── Save live workout ─────────────────────────────────────────────────────────
-
+# ── Real-time exercise save ───────────────────────────────────────────────────
 
 @history_bp.route('/live/save-exercise', methods=['POST'])
 @login_required
 def save_exercise_realtime():
-    """
-    Save a single exercise in real-time when user clicks OK.
-    Called via fetch() from the live workout screen.
-    """
+    """Save a single exercise with all its sets when user clicks OK."""
     data = request.json or {}
     session_id  = data.get('session_id')
     exercise_id = data.get('exercise_id')
-    sets_done   = data.get('sets_done', 0)
-    reps_done   = data.get('reps_done', '')
-    weight_kg   = data.get('weight_kg')
+    sets_data   = data.get('sets', [])   # list of {weight, reps}
     effort      = data.get('effort')
     notes       = data.get('notes', '')
 
@@ -239,28 +228,48 @@ def save_exercise_realtime():
     if not ws:
         return jsonify({'ok': False, 'error': 'Session not found'}), 404
 
-    # Upsert: remove existing record for this exercise in this session, re-insert
+    # Validate: at least one set with reps
+    valid_sets = []
+    for s in sets_data:
+        r = (s.get('reps') or '').strip()
+        w = s.get('weight')
+        if r:
+            try:
+                weight_val = float(w) if w else None
+            except (ValueError, TypeError):
+                weight_val = None
+            valid_sets.append({'reps': r, 'weight': weight_val})
+
+    if not valid_sets:
+        return jsonify({'ok': False, 'error': 'No valid sets'}), 400
+
+    # Remove previous records for this exercise in this session
     SessionExercise.query.filter_by(
         session_id=ws.id, exercise_id=int(exercise_id)).delete()
 
-    se = SessionExercise(
-        session_id=ws.id,
-        exercise_id=int(exercise_id),
-        sets_done=int(sets_done),
-        reps_done=str(reps_done),
-        weight_kg=float(weight_kg) if weight_kg else None,
-        effort_level=effort,
-        notes=notes or None
-    )
-    db.session.add(se)
+    # Save one SessionExercise per set
+    saved_ids = []
+    for s in valid_sets:
+        se = SessionExercise(
+            session_id=ws.id,
+            exercise_id=int(exercise_id),
+            sets_done=1,
+            reps_done=s['reps'],
+            weight_kg=s['weight'],
+            effort_level=effort,
+            notes=notes or None
+        )
+        db.session.add(se)
+        db.session.flush()
+        saved_ids.append(se.id)
+
     db.session.commit()
-    return jsonify({'ok': True, 'session_exercise_id': se.id})
+    return jsonify({'ok': True, 'saved': len(saved_ids)})
 
 
 @history_bp.route('/live/cancel/<int:session_id>', methods=['POST'])
 @login_required
 def cancel_live(session_id):
-    """Delete a session that was started but had no exercises recorded."""
     ws = WorkoutSession.query.filter_by(
         id=session_id, user_id=current_user.id).first()
     if ws:
@@ -271,33 +280,22 @@ def cancel_live(session_id):
     return jsonify({'ok': True})
 
 
+# ── Finalize session ──────────────────────────────────────────────────────────
+
 @history_bp.route('/live/save', methods=['POST'])
 @login_required
 def save_live():
-    session_id = request.form.get('session_id')
-    duration   = request.form.get('duration') or None
+    session_id  = request.form.get('session_id')
+    duration    = request.form.get('duration') or None
     custom_name = request.form.get('custom_name', '').strip()
-    group_ids  = [int(g) for g in request.form.getlist('muscle_group_ids') if g.isdigit()]
-    raw_data   = request.form.get('exercise_data', '[]')
+    group_ids   = [int(g) for g in request.form.getlist('muscle_group_ids') if g.isdigit()]
 
-    try:
-        ex_data = json.loads(raw_data)
-    except Exception:
-        ex_data = []
-
-    try:
-        exercise_ids = json.loads(request.form.get('exercise_ids_json', '[]'))
-    except Exception:
-        exercise_ids = []
-
-    # Fetch the session created at live() start
     ws = None
     if session_id:
         ws = WorkoutSession.query.filter_by(
             id=int(session_id), user_id=current_user.id).first()
 
     if not ws:
-        # Fallback: create now
         ws = WorkoutSession(
             user_id=current_user.id,
             plan_id=int(request.form.get('plan_id')) if request.form.get('plan_id') else None,
@@ -306,66 +304,22 @@ def save_live():
         db.session.add(ws)
         db.session.flush()
 
-    # Update fields
     ws.duration_minutes = int(duration) if duration else None
     ws.custom_name = custom_name or None
     if group_ids:
         _attach_muscle_groups(ws, group_ids)
 
-    # Remove old exercises (in case of re-save) and add new ones
-    SessionExercise.query.filter_by(session_id=ws.id).delete()
-
-    for item in ex_data:
-        ex_idx = item.get('ex_idx', 0)
-        sets = item.get('sets', [])
-        if ex_idx >= len(exercise_ids):
-            continue
-
-        # Only count sets that have BOTH weight and reps filled
-        valid_sets = []
-        for s in sets:
-            w = (s.get('weight') or '').strip()
-            r = (s.get('reps') or '').strip()
-            if w and r:
-                try:
-                    float(w)  # must be numeric
-                    valid_sets.append(s)
-                except ValueError:
-                    pass
-
-        # Skip exercise entirely if no valid set
-        if not valid_sets:
-            continue
-
-        last_set = valid_sets[-1]
-        try:
-            weight = float(last_set.get('weight'))
-        except (ValueError, TypeError):
-            weight = None
-
-        effort = item.get('effort', None)
-        se = SessionExercise(
-            session_id=ws.id,
-            exercise_id=exercise_ids[ex_idx],
-            sets_done=len(valid_sets),
-            reps_done=last_set.get('reps', ''),
-            weight_kg=weight,
-            effort_level=effort
-        )
-        db.session.add(se)
-
-    # Count how many exercises were actually saved
+    # Count exercises already saved via real-time saves
     saved_count = SessionExercise.query.filter_by(session_id=ws.id).count()
 
     if saved_count == 0:
-        # No exercises recorded — delete the session entirely
         db.session.delete(ws)
         db.session.commit()
         flash('Nenhum exercício registrado. Treino não salvo.', 'info')
         return redirect(url_for('history.start'))
 
     db.session.commit()
-    flash(f'Treino finalizado com {saved_count} exercício(s)! Duração: {duration or "?"}min', 'success')
+    flash(f'Treino finalizado com {saved_count} série(s) registrada(s)!', 'success')
     return redirect(url_for('history.index'))
 
 
