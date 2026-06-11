@@ -336,8 +336,25 @@ def edit_plan_exercise(plan_id, pe_id):
     # If name changed, try to find matching exercise or create new one
     notes  = request.form.get('notes', '').strip()
     if name and name.lower() != pe.exercise.name.lower():
-        ex = _find_or_create_exercise(name)
-        pe.exercise_id = ex.id
+        # Exact match first
+        existing = Exercise.query.filter(
+            db.func.lower(Exercise.name) == name.lower()
+        ).first()
+        if existing:
+            pe.exercise_id = existing.id
+        else:
+            # Create new exercise in same muscle group
+            new_ex = Exercise(
+                name=name,
+                description=pe.exercise.description,
+                instructions=pe.exercise.instructions,
+                difficulty=pe.exercise.difficulty,
+                equipment=pe.exercise.equipment,
+                muscle_group_id=pe.exercise.muscle_group_id
+            )
+            db.session.add(new_ex)
+            db.session.flush()
+            pe.exercise_id = new_ex.id
     try: pe.sets = int(sets)
     except: pass
     pe.reps = str(reps)
