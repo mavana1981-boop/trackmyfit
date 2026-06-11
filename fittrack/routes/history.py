@@ -127,6 +127,7 @@ def live(plan_id):
             e.rest_seconds = 60
             e.weight = None
             e.pe_id = None
+            e.coach_notes = ''
             e.history = _exercise_history(current_user.id, ex.id)
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
@@ -162,6 +163,7 @@ def live(plan_id):
             e.rest_seconds = pe.rest_seconds
             e.weight = pe.suggested_weight if pe.suggested_weight else (last.weight_kg if last else None)
             e.pe_id = pe.id
+            e.coach_notes = pe.notes or ''
             e.history = _exercise_history(current_user.id, pe.exercise_id)
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
@@ -241,6 +243,20 @@ def save_exercise_realtime():
     db.session.add(se)
     db.session.commit()
     return jsonify({'ok': True, 'session_exercise_id': se.id})
+
+
+@history_bp.route('/live/cancel/<int:session_id>', methods=['POST'])
+@login_required
+def cancel_live(session_id):
+    """Delete a session that was started but had no exercises recorded."""
+    ws = WorkoutSession.query.filter_by(
+        id=session_id, user_id=current_user.id).first()
+    if ws:
+        count = SessionExercise.query.filter_by(session_id=ws.id).count()
+        if count == 0:
+            db.session.delete(ws)
+            db.session.commit()
+    return jsonify({'ok': True})
 
 
 @history_bp.route('/live/save', methods=['POST'])
