@@ -127,7 +127,19 @@ def live(plan_id):
             e.rest_seconds = 60
             e.weight = None
             e.pe_id = None
-            e.coach_notes = ''
+            # Look up coach notes from any plan exercise for this user
+            from models import PlanExercise as PE, WorkoutPlan as WP
+            pe_with_notes = (
+                db.session.query(PE)
+                .join(WP, PE.plan_id == WP.id)
+                .filter(
+                    WP.user_id == current_user.id,
+                    PE.exercise_id == ex.id,
+                    PE.notes.isnot(None)
+                )
+                .first()
+            )
+            e.coach_notes = pe_with_notes.notes if pe_with_notes else ''
             e.history = _exercise_history(current_user.id, ex.id)
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
