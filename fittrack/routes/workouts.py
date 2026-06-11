@@ -111,7 +111,20 @@ ATENÇÃO: Leia o PDF com cuidado. Preserve EXATAMENTE:
 - Nome de cada treino (Treino A, B, C, etc.)
 Não invente nem altere nada."""}
     ]}], "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192}}
-    r = http_requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}", json=payload, timeout=60)
+    # Try newest model, fall back to stable ones
+    last_exc = None
+    r = None
+    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
+        try:
+            r = http_requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}",
+                json=payload, timeout=60)
+            if r.status_code != 404:
+                break
+        except Exception as e:
+            last_exc = e
+    if r is None:
+        raise last_exc
     r.raise_for_status()
     return _parse_json(r.json()['candidates'][0]['content']['parts'][0]['text'])
 
