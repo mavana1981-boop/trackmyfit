@@ -59,7 +59,7 @@ class PlanExercise(db.Model):
     plan_id = db.Column(db.Integer, db.ForeignKey('workout_plans.id'), nullable=False)
     exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.id'), nullable=False)
     sets = db.Column(db.Integer, default=3)
-    reps = db.Column(db.String(20), default='10-12')
+    reps = db.Column(db.String(100), default='10-12')
     rest_seconds = db.Column(db.Integer, default=60)
     order = db.Column(db.Integer, default=0)
     suggested_weight = db.Column(db.Float, nullable=True)  # AI-suggested next weight
