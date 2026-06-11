@@ -189,6 +189,13 @@
             </div>
             {% endif %}
 
+            <!-- Notes field -->
+            <div style="margin-bottom:12px;">
+                <textarea id="notes{{ loop.index0 }}" class="form-control"
+                    rows="2" placeholder="Observações sobre este exercício (opcional)..."
+                    style="font-size:0.85rem; resize:none;"></textarea>
+            </div>
+
             <!-- OK button -->
             <button class="ok-btn" onclick="saveAndReturn({{ loop.index0 }})">
                 ✓ OK — RETORNAR AOS EXERCÍCIOS
@@ -337,7 +344,8 @@ async function _saveExercise(ei) {
                 sets_done: validSets,
                 reps_done: lastReps,
                 weight_kg: lastWeight,
-                effort: null
+                effort: null,
+                notes: (document.getElementById('notes'+ei)?.value || '').trim()
             })
         });
         const data = await resp.json();
