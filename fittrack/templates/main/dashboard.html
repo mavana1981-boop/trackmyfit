@@ -142,7 +142,7 @@
                             <div class="plan-row-meta">
                                 <span>{{ plan.plan_exercises|length }} exerc.</span>
                                 {% for g in plan.muscle_groups %}
-                                <span class="plan-group-dot" title="{{ g.name }}">{{ g.icon }}</span>
+                                <span style="background:var(--bg4); border:1px solid var(--border); border-radius:5px; padding:1px 6px; font-size:0.62rem; font-weight:700; color:var(--text2);">{{ g.name }}</span>
                                 {% endfor %}
                             </div>
                         </div>
