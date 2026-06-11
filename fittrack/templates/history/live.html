@@ -199,7 +199,7 @@
 
 <!-- Submit form -->
 <form method="POST" action="{{ url_for('history.save_live') }}" id="finishForm" style="display:none;">
-    <input type="hidden" name="session_id" value="{{ session_id }}">
+    <input type="hidden" name="session_id" id="formSessionId" value="{{ session_id }}">
     <input type="hidden" name="plan_id" value="{{ plan_id or '' }}">
     <input type="hidden" name="duration" id="finalDuration">
     <input type="hidden" name="custom_name" id="finalName">
@@ -240,8 +240,10 @@
 
 {% block extra_js %}
 <script>
-const exerciseIds = {{ exercise_ids_json|safe }};
-const sessionId   = '{{ session_id }}';
+const exerciseIds       = {{ exercise_ids_json|safe }};
+let   sessionId         = '{{ session_id }}';
+const planIdForSession  = {{ plan_id_for_session or 'null' }};
+const groupIdsForSession = {{ group_ids_for_session|tojson }};
 // Track which set inputs user actually changed
 const changed = {}; // "ei_si" -> true
 
@@ -334,9 +336,18 @@ async function _saveExercise(ei) {
         const resp = await fetch('/live/save-exercise', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ session_id: sessionId, exercise_id: exId, sets })
+            body: JSON.stringify({
+                session_id: sessionId,
+                exercise_id: exId,
+                sets,
+                plan_id_for_session: planIdForSession,
+                group_ids_for_session: groupIdsForSession
+            })
         });
         const data = await resp.json();
+        if (data.ok && data.session_id) {
+            sessionId = String(data.session_id); // Update from 'pending' to real ID
+        }
         return data.ok === true;
     } catch(e) { return false; }
 }
@@ -356,7 +367,7 @@ async function exitWorkout() {
     const hasSaved = document.querySelectorAll('.ex-dot.has-data').length > 0;
     const msg = hasSaved ? 'Sair? Os exercícios marcados já foram salvos.' : 'Sair? Nenhum exercício registrado — treino será cancelado.';
     if (!confirm(msg)) return;
-    if (!hasSaved && sessionId) {
+    if (sessionId && sessionId !== 'pending') {
         try { await fetch('/live/cancel/' + sessionId, {method:'POST'}); } catch(e) {}
     }
     window.location.href = '{{ url_for("history.start") }}';
@@ -367,6 +378,7 @@ function openFinish()  { document.getElementById('finishModal').classList.add('a
 function closeFinish() { document.getElementById('finishModal').classList.remove('active'); }
 
 function submitFinish() {
+    document.getElementById('formSessionId').value = sessionId;
     document.getElementById('finalDuration').value = '';
     document.getElementById('finalName').value = document.getElementById('customName').value;
     const gi = document.getElementById('groupInputs');
