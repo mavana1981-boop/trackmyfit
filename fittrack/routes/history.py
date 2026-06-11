@@ -2,8 +2,12 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from models import WorkoutSession, SessionExercise, WorkoutPlan, PlanExercise, Exercise, MuscleGroup
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import json
+
+def _today_brazil():
+    """Return today's date in Brazil timezone (UTC-3)."""
+    return (datetime.now(timezone.utc) - timedelta(hours=3)).date()
 
 history_bp = Blueprint('history', __name__)
 
@@ -155,7 +159,7 @@ def live(plan_id):
     ws = WorkoutSession(
         user_id=current_user.id,
         plan_id=plan_id_val,
-        date=datetime.utcnow().date(),
+        date=_today_brazil(),
     )
     db.session.add(ws)
     db.session.flush()
@@ -184,6 +188,47 @@ def live(plan_id):
 
 
 # ── Save live workout ─────────────────────────────────────────────────────────
+
+
+@history_bp.route('/live/save-exercise', methods=['POST'])
+@login_required
+def save_exercise_realtime():
+    """
+    Save a single exercise in real-time when user clicks OK.
+    Called via fetch() from the live workout screen.
+    """
+    data = request.json or {}
+    session_id  = data.get('session_id')
+    exercise_id = data.get('exercise_id')
+    sets_done   = data.get('sets_done', 0)
+    reps_done   = data.get('reps_done', '')
+    weight_kg   = data.get('weight_kg')
+    effort      = data.get('effort')
+
+    if not session_id or not exercise_id:
+        return jsonify({'ok': False, 'error': 'Missing fields'}), 400
+
+    ws = WorkoutSession.query.filter_by(
+        id=int(session_id), user_id=current_user.id).first()
+    if not ws:
+        return jsonify({'ok': False, 'error': 'Session not found'}), 404
+
+    # Upsert: remove existing record for this exercise in this session, re-insert
+    SessionExercise.query.filter_by(
+        session_id=ws.id, exercise_id=int(exercise_id)).delete()
+
+    se = SessionExercise(
+        session_id=ws.id,
+        exercise_id=int(exercise_id),
+        sets_done=int(sets_done),
+        reps_done=str(reps_done),
+        weight_kg=float(weight_kg) if weight_kg else None,
+        effort_level=effort
+    )
+    db.session.add(se)
+    db.session.commit()
+    return jsonify({'ok': True, 'session_exercise_id': se.id})
+
 
 @history_bp.route('/live/save', methods=['POST'])
 @login_required
@@ -215,7 +260,7 @@ def save_live():
         ws = WorkoutSession(
             user_id=current_user.id,
             plan_id=int(request.form.get('plan_id')) if request.form.get('plan_id') else None,
-            date=datetime.utcnow().date()
+            date=_today_brazil()
         )
         db.session.add(ws)
         db.session.flush()
@@ -307,7 +352,7 @@ def record():
         try:
             date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            date = datetime.utcnow().date()
+            date = _today_brazil()
 
         ws = WorkoutSession(
             user_id=current_user.id,
@@ -335,5 +380,5 @@ def record():
         flash('Treino registrado com sucesso!', 'success')
         return redirect(url_for('history.index'))
 
-    today = datetime.utcnow().date().strftime('%Y-%m-%d')
+    today = _today_brazil().strftime('%Y-%m-%d')
     return render_template('history/record.html', plans=plans, groups=groups, today=today)
