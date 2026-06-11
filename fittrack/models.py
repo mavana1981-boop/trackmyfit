@@ -33,7 +33,7 @@ class MuscleGroup(db.Model):
 class Exercise(db.Model):
     __tablename__ = 'exercises'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
+    name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
     difficulty = db.Column(db.String(20), default='Intermediário')
