@@ -162,6 +162,34 @@ def _call_cloudflare(pdf_bytes):
     return _parse_json(data['result']['response'])
 
 
+
+def _call_claude(pdf_bytes):
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key:
+        raise ValueError('ANTHROPIC_API_KEY não configurada.')
+    pdf_text = _extract_pdf_text(pdf_bytes)
+    if not pdf_text:
+        raise ValueError('Não foi possível extrair texto do PDF.')
+    payload = {
+        "model": "claude-haiku-4-5",
+        "max_tokens": 4096,
+        "system": "Você é um extrator de dados de planilhas de treino. Sua única saída é JSON válido. Nunca altere nomes, séries, repetições ou ordem dos exercícios. Copie tudo exatamente como está no documento.",
+        "messages": [{"role": "user", "content": f"{PROMPT}\n\nCONTEÚDO DO PDF:\n{pdf_text[:12000]}"}]
+    }
+    r = http_requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        },
+        json=payload, timeout=60
+    )
+    r.raise_for_status()
+    text = r.json()["content"][0]["text"]
+    return _parse_json(text)
+
+
 def _analyze_pdf(pdf_bytes):
     errors = []
     for name, fn in [('Gemini', _call_gemini), ('Claude', _call_claude)]:
