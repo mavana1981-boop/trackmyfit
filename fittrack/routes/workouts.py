@@ -334,6 +334,7 @@ def edit_plan_exercise(plan_id, pe_id):
     reps   = request.form.get('reps', pe.reps)
     rest   = request.form.get('rest', pe.rest_seconds)
     # If name changed, try to find matching exercise or create new one
+    notes  = request.form.get('notes', '').strip()
     if name and name.lower() != pe.exercise.name.lower():
         ex = _find_or_create_exercise(name)
         pe.exercise_id = ex.id
@@ -342,6 +343,7 @@ def edit_plan_exercise(plan_id, pe_id):
     pe.reps = str(reps)
     try: pe.rest_seconds = int(rest)
     except: pass
+    pe.notes = notes or None
     db.session.commit()
     return redirect(url_for('workouts.index') + f'#plan{plan_id}')
 
