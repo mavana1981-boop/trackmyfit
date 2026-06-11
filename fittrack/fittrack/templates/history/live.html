@@ -144,45 +144,47 @@
                     <span>#</span><span>Kg</span><span>Reps</span><span>✓</span>
                 </div>
                 <div id="setsBody{{ loop.index0 }}">
+                    {% set ei = loop.index0 %}
                     {% if ex.series_data %}
                         {% set series = ex.series_data | fromjson %}
                         {% for s in series %}
-                        <div class="set-row" id="sr{{ loop.index0 }}_{{ loop.index0 }}{{ loop.index0 }}{{ loop.index }}">
-                            <div class="set-num">{{ loop.index }}</div>
+                        {% set si = loop.index0 %}
+                        <div class="set-row" id="sr{{ ei }}_{{ si }}">
+                            <div class="set-num">{{ si + 1 }}</div>
                             <div class="set-inp-wrap">
                                 <input class="set-inp" type="number" step="0.5" min="0"
-                                    id="w{{ loop.index0 }}_{{ loop.index - 1 }}"
+                                    id="w{{ ei }}_{{ si }}"
                                     value="{{ ex.weight or '' }}" placeholder="—"
-                                    oninput="trackChange({{ loop.index0 }}, {{ loop.index - 1 }})">
-                                {% if ex.suggest_increase and loop.first %}
+                                    oninput="trackChange({{ ei }}, {{ si }})">
+                                {% if ex.suggest_increase and si == 0 %}
                                 <div class="suggest-lbl">cogite aumentar peso</div>
                                 {% endif %}
                             </div>
                             <input class="set-inp" type="text"
-                                id="r{{ loop.index0 }}_{{ loop.index - 1 }}"
+                                id="r{{ ei }}_{{ si }}"
                                 value="{{ s.reps }}" placeholder="—"
-                                oninput="trackChange({{ loop.index0 }}, {{ loop.index - 1 }})">
-                            <button class="set-check" onclick="checkSet({{ loop.index0 }}, {{ loop.index - 1 }})">✓</button>
+                                oninput="trackChange({{ ei }}, {{ si }})">
+                            <button class="set-check" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
                         </div>
                         {% endfor %}
                     {% else %}
-                        {% for s in range(ex.sets) %}
-                        <div class="set-row" id="sr{{ loop.index0 }}_{{ s }}">
-                            <div class="set-num">{{ s+1 }}</div>
+                        {% for si in range(ex.sets) %}
+                        <div class="set-row" id="sr{{ ei }}_{{ si }}">
+                            <div class="set-num">{{ si + 1 }}</div>
                             <div class="set-inp-wrap">
                                 <input class="set-inp" type="number" step="0.5" min="0"
-                                    id="w{{ loop.index0 }}_{{ s }}"
+                                    id="w{{ ei }}_{{ si }}"
                                     value="{{ ex.weight or '' }}" placeholder="—"
-                                    oninput="trackChange({{ loop.index0 }}, {{ s }})">
-                                {% if ex.suggest_increase and s == 0 %}
+                                    oninput="trackChange({{ ei }}, {{ si }})">
+                                {% if ex.suggest_increase and si == 0 %}
                                 <div class="suggest-lbl">cogite aumentar peso</div>
                                 {% endif %}
                             </div>
                             <input class="set-inp" type="text"
-                                id="r{{ loop.index0 }}_{{ s }}"
+                                id="r{{ ei }}_{{ si }}"
                                 value="{{ ex.reps }}" placeholder="—"
-                                oninput="trackChange({{ loop.index0 }}, {{ s }})">
-                            <button class="set-check" onclick="checkSet({{ loop.index0 }}, {{ s }})">✓</button>
+                                oninput="trackChange({{ ei }}, {{ si }})">
+                            <button class="set-check" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
                         </div>
                         {% endfor %}
                     {% endif %}
