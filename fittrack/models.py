@@ -63,6 +63,7 @@ class PlanExercise(db.Model):
     rest_seconds = db.Column(db.Integer, default=60)
     order = db.Column(db.Integer, default=0)
     suggested_weight = db.Column(db.Float, nullable=True)  # AI-suggested next weight
+    notes = db.Column(db.Text, nullable=True)  # Coach instructions shown in live workout
     exercise = db.relationship('Exercise')
 
 
