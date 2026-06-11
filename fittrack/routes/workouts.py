@@ -65,10 +65,22 @@ def _save_plans(planos, user_id):
 
 # ── AI providers ──────────────────────────────────────────────────────────────
 
-PROMPT = """Analise este conteúdo de treino e extraia todos os planos encontrados.
-Retorne SOMENTE um JSON válido, sem markdown, no formato:
-{"planos":[{"nome":"Treino A","descricao":"","exercicios":[{"nome":"Nome","series":3,"repeticoes":"10-12","descanso_segundos":60,"grupo_muscular":"Peito"}]}]}
-Regras: extraia TODOS os treinos; grupo_muscular deve ser um de: Abdominais, Costas, Bíceps, Peito, Pernas, Ombros, Tríceps, Panturrilha; retorne apenas o JSON."""
+PROMPT = """Você é um extrator de dados de planilhas de treino. Sua única função é converter o conteúdo do PDF em JSON estruturado.
+
+REGRAS ABSOLUTAS — NUNCA VIOLE:
+1. Copie o nome de cada exercício EXATAMENTE como está escrito no PDF. Não traduza, não abrevie, não renomeie.
+2. Copie séries e repetições EXATAMENTE como estão. Se o PDF diz "3x12", use series=3 e repeticoes="12". Se diz "4x8-10", use series=4 e repeticoes="8-10".
+3. Copie o tempo de descanso EXATAMENTE. Se não informado, use 60.
+4. Preserve a ORDEM dos exercícios exatamente como aparecem no PDF.
+5. Preserve os nomes dos treinos exatamente (Treino A, Treino B, etc. ou como denominados).
+6. NÃO invente, NÃO altere, NÃO omita nenhum exercício.
+7. Extraia TODOS os treinos presentes no documento.
+
+FORMATO DE SAÍDA — APENAS JSON VÁLIDO, SEM MARKDOWN, SEM TEXTO EXTRA:
+{"planos":[{"nome":"Treino A","descricao":"descrição se houver","exercicios":[{"nome":"Nome exato do exercício","series":3,"repeticoes":"12","descanso_segundos":60,"grupo_muscular":"Peito"}]}]}
+
+grupo_muscular deve ser um de: Abdominais, Costas, Bíceps, Peito, Pernas, Ombros, Tríceps, Panturrilha.
+Se não souber o grupo, use o mais próximo."""
 
 
 def _parse_json(text):
@@ -104,8 +116,8 @@ def _call_groq(pdf_bytes):
     if not text: raise ValueError('Não foi possível extrair texto do PDF.')
     c = Groq(api_key=api_key).chat.completions.create(
         model='llama-3.3-70b-versatile',
-        messages=[{"role":"system","content":"Responda APENAS com JSON válido."},
-                  {"role":"user","content":f"{PROMPT}\n\nPDF:\n{text[:12000]}"}],
+        messages=[{"role":"system","content":"Você é um extrator de dados de planilhas de treino. Sua única saída é JSON válido. Nunca altere nomes, séries, repetições ou ordem dos exercícios. Copie tudo exatamente como está no documento."},
+                  {"role":"user","content":f"{PROMPT}\n\nCONTEÚDO DO PDF (copie fielmente):\n{text[:12000]}"}],
         temperature=0.1, max_tokens=4096)
     return _parse_json(c.choices[0].message.content)
 
@@ -119,8 +131,8 @@ def _call_cloudflare(pdf_bytes):
     r = http_requests.post(
         f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
         headers={"Authorization": f"Bearer {api_token}"},
-        json={"messages": [{"role":"system","content":"Responda APENAS com JSON válido."},
-                            {"role":"user","content":f"{PROMPT}\n\nPDF:\n{text[:12000]}"}],
+        json={"messages": [{"role":"system","content":"Você é um extrator de dados de planilhas de treino. Sua única saída é JSON válido. Nunca altere nomes, séries, repetições ou ordem dos exercícios. Copie tudo exatamente como está no documento."},
+                            {"role":"user","content":f"{PROMPT}\n\nCONTEÚDO DO PDF (copie fielmente):\n{text[:12000]}"}],
               "max_tokens": 4096, "temperature": 0.1},
         timeout=90)
     r.raise_for_status()
@@ -131,7 +143,7 @@ def _call_cloudflare(pdf_bytes):
 
 def _analyze_pdf(pdf_bytes):
     errors = []
-    for name, fn in [('Cloudflare', _call_cloudflare), ('Gemini', _call_gemini)]:
+    for name, fn in [('Cloudflare', _call_cloudflare), ('Groq', _call_groq), ('Gemini', _call_gemini)]:
         try:
             planos = fn(pdf_bytes)
             if planos: return planos, name
