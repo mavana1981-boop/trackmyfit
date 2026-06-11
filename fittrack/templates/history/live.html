@@ -46,7 +46,7 @@
 .sets-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:10px; }
 .sets-head { display:grid; grid-template-columns:28px 1fr 1fr 36px; gap:4px; padding:7px 12px; background:var(--bg4); border-bottom:1px solid var(--border); }
 .sets-head span { font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; text-align:center; }
-.set-row { display:grid; grid-template-columns:28px 1fr 1fr 36px; gap:4px; padding:7px 12px; border-bottom:1px solid var(--border); align-items:center; }
+.set-row { display:grid; grid-template-columns:28px 1fr 1fr 36px 24px; gap:4px; padding:7px 12px; border-bottom:1px solid var(--border); align-items:center; }
 .set-row:last-child { border-bottom:none; }
 .set-row.done-row { background:rgba(232,25,44,0.04); }
 .set-num { font-family:'Bebas Neue',sans-serif; font-size:0.88rem; color:var(--text3); text-align:center; }
@@ -140,29 +140,58 @@
 
             <!-- Dynamic sets table -->
             <div class="sets-card">
-                <div class="sets-head">
-                    <span>#</span><span>Kg</span><span>Reps</span><span>✓</span>
+                <div class="sets-head" style="grid-template-columns:28px 1fr 1fr 36px 28px;">
+                    <span>#</span><span>Kg</span><span>Reps</span><span>✓</span><span></span>
                 </div>
                 <div id="setsBody{{ loop.index0 }}">
-                    {% for s in range(ex.sets) %}
-                    <div class="set-row" id="sr{{ loop.index0 }}_{{ s }}">
-                        <div class="set-num">{{ s+1 }}</div>
-                        <div class="set-inp-wrap">
-                            <input class="set-inp" type="number" step="0.5" min="0"
-                                id="w{{ loop.index0 }}_{{ s }}"
-                                value="{{ ex.weight or '' }}" placeholder="—"
-                                oninput="trackChange({{ loop.index0 }}, {{ s }})">
-                            {% if ex.suggest_increase and s == 0 %}
-                            <div class="suggest-lbl">cogite aumentar peso</div>
-                            {% endif %}
+                    {% set ei = loop.index0 %}
+                    {% if ex.series_data %}
+                        {% set series = ex.series_data | fromjson %}
+                        {% for s in series %}
+                        {% set si = loop.index0 %}
+                        <div class="set-row" id="sr{{ ei }}_{{ si }}">
+                            <div class="set-num">{{ si + 1 }}</div>
+                            <div class="set-inp-wrap">
+                                <input class="set-inp" type="number" step="0.5" min="0"
+                                    id="w{{ ei }}_{{ si }}"
+                                    value="{{ ex.weight or '' }}" placeholder="—"
+                                    oninput="trackChange({{ ei }}, {{ si }})">
+                                {% if ex.suggest_increase and si == 0 %}
+                                <div class="suggest-lbl">cogite aumentar peso</div>
+                                {% endif %}
+                            </div>
+                            <input class="set-inp" type="text"
+                                id="r{{ ei }}_{{ si }}"
+                                value="{{ s.reps }}" placeholder="—"
+                                oninput="trackChange({{ ei }}, {{ si }})">
+                            <button class="set-check" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
+                            <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
+                                style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
                         </div>
-                        <input class="set-inp" type="text"
-                            id="r{{ loop.index0 }}_{{ s }}"
-                            value="{{ ex.reps }}" placeholder="—"
-                            oninput="trackChange({{ loop.index0 }}, {{ s }})">
-                        <button class="set-check" onclick="checkSet({{ loop.index0 }}, {{ s }})">✓</button>
-                    </div>
-                    {% endfor %}
+                        {% endfor %}
+                    {% else %}
+                        {% for si in range(ex.sets) %}
+                        <div class="set-row" id="sr{{ ei }}_{{ si }}">
+                            <div class="set-num">{{ si + 1 }}</div>
+                            <div class="set-inp-wrap">
+                                <input class="set-inp" type="number" step="0.5" min="0"
+                                    id="w{{ ei }}_{{ si }}"
+                                    value="{{ ex.weight or '' }}" placeholder="—"
+                                    oninput="trackChange({{ ei }}, {{ si }})">
+                                {% if ex.suggest_increase and si == 0 %}
+                                <div class="suggest-lbl">cogite aumentar peso</div>
+                                {% endif %}
+                            </div>
+                            <input class="set-inp" type="text"
+                                id="r{{ ei }}_{{ si }}"
+                                value="{{ ex.reps }}" placeholder="—"
+                                oninput="trackChange({{ ei }}, {{ si }})">
+                            <button class="set-check" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
+                            <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
+                                style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
                 </div>
                 <button class="add-set-btn" onclick="addSet({{ loop.index0 }})">+ Adicionar série</button>
             </div>
@@ -288,7 +317,6 @@ function addSet(ei) {
     const body = document.getElementById('setsBody'+ei);
     const rows = body.querySelectorAll('.set-row');
     const si = rows.length;
-    // Get last weight as default
     const lastW = document.getElementById('w'+ei+'_'+(si-1))?.value || '';
     const lastR = document.getElementById('r'+ei+'_'+(si-1))?.value || '';
     const div = document.createElement('div');
@@ -305,10 +333,22 @@ function addSet(ei) {
             id="r${ei}_${si}" value="${lastR}" placeholder="—"
             oninput="trackChange(${ei}, ${si})">
         <button class="set-check" onclick="checkSet(${ei}, ${si})">✓</button>
+        <button type="button" onclick="removeSetRow(${ei}, ${si}, this)"
+            style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
     `;
     body.appendChild(div);
-    // Mark as changed since user explicitly added it
     changed[ei+'_'+si] = true;
+}
+
+function removeSetRow(ei, si, btn) {
+    const body = document.getElementById('setsBody'+ei);
+    if (body.querySelectorAll('.set-row').length <= 1) return; // keep at least 1
+    const row = document.getElementById('sr'+ei+'_'+si) || btn.closest('.set-row');
+    if (row) row.remove();
+    // Renumber remaining rows
+    body.querySelectorAll('.set-row').forEach((r, i) => {
+        r.querySelector('.set-num').textContent = i + 1;
+    });
 }
 
 // Collect all sets for an exercise
