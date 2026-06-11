@@ -12,19 +12,28 @@ def _today_brazil():
 history_bp = Blueprint('history', __name__)
 
 
-def _exercise_history(user_id, exercise_id, limit=6):
+def _exercise_history(user_id, exercise_id, limit=10):
+    """Last N sessions for this exercise — ANY registration (weight optional)."""
     return (
         db.session.query(SessionExercise)
         .join(WorkoutSession)
         .filter(
             WorkoutSession.user_id == user_id,
-            SessionExercise.exercise_id == exercise_id,
-            SessionExercise.weight_kg.isnot(None)
+            SessionExercise.exercise_id == exercise_id
         )
         .order_by(WorkoutSession.date.desc())
         .limit(limit)
         .all()
-    )[::-1]
+    )[::-1]  # oldest first for chart
+
+
+def _should_suggest_increase(history):
+    """Return True if last 4 entries all have the same weight (non-null)."""
+    weights = [h.weight_kg for h in history if h.weight_kg is not None]
+    if len(weights) < 4:
+        return False
+    last4 = weights[-4:]
+    return len(set(last4)) == 1
 
 
 def _attach_muscle_groups(session, group_ids):
@@ -119,6 +128,7 @@ def live(plan_id):
             e.weight = None
             e.pe_id = None
             e.history = _exercise_history(current_user.id, ex.id)
+            e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
         plan_name = 'Treino Avulso'
         plan_id_val = None
@@ -153,6 +163,7 @@ def live(plan_id):
             e.weight = pe.suggested_weight if pe.suggested_weight else (last.weight_kg if last else None)
             e.pe_id = pe.id
             e.history = _exercise_history(current_user.id, pe.exercise_id)
+            e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
 
     # ── Create session immediately on load ────────────────────────────────────
