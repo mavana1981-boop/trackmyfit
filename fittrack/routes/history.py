@@ -177,17 +177,10 @@ def live(plan_id):
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
 
-    # Create session immediately
-    ws = WorkoutSession(
-        user_id=current_user.id,
-        plan_id=plan_id_val,
-        date=_today_brazil(),
-    )
-    db.session.add(ws)
-    db.session.flush()
-    _attach_muscle_groups(ws, selected_group_ids)
-    db.session.commit()
-    session_id = ws.id
+    # Session created lazily on first exercise save
+    session_id = 'pending'
+    plan_id_for_session = plan_id_val
+    selected_group_ids_for_session = selected_group_ids
 
     import json as _json
     exercise_ids_json = _json.dumps([e.id for e in exercises])
@@ -200,6 +193,8 @@ def live(plan_id):
                            plan_name=plan_name,
                            plan_id=plan_id_val,
                            session_id=session_id,
+                           plan_id_for_session=plan_id_for_session,
+                           group_ids_for_session=selected_group_ids,
                            exercise_ids_json=exercise_ids_json,
                            pe_ids_json=pe_ids_json,
                            plan_id_int=plan_id_int,
@@ -220,13 +215,29 @@ def save_exercise_realtime():
     effort      = data.get('effort')
     notes       = data.get('notes', '')
 
-    if not session_id or not exercise_id:
-        return jsonify({'ok': False, 'error': 'Missing fields'}), 400
+    plan_id_fs    = data.get('plan_id_for_session')
+    group_ids_fs  = data.get('group_ids_for_session', [])
 
-    ws = WorkoutSession.query.filter_by(
-        id=int(session_id), user_id=current_user.id).first()
+    if not exercise_id:
+        return jsonify({'ok': False, 'error': 'Missing exercise_id'}), 400
+
+    # Lazy session creation: create on first exercise save
+    ws = None
+    if session_id and session_id != 'pending':
+        ws = WorkoutSession.query.filter_by(
+            id=int(session_id), user_id=current_user.id).first()
+
     if not ws:
-        return jsonify({'ok': False, 'error': 'Session not found'}), 404
+        ws = WorkoutSession(
+            user_id=current_user.id,
+            plan_id=int(plan_id_fs) if plan_id_fs else None,
+            date=_today_brazil(),
+        )
+        db.session.add(ws)
+        db.session.flush()
+        if group_ids_fs:
+            _attach_muscle_groups(ws, [int(g) for g in group_ids_fs])
+        db.session.commit()
 
     # Validate: at least one set with reps
     valid_sets = []
@@ -264,14 +275,19 @@ def save_exercise_realtime():
         saved_ids.append(se.id)
 
     db.session.commit()
-    return jsonify({'ok': True, 'saved': len(saved_ids)})
+    return jsonify({'ok': True, 'saved': len(saved_ids), 'session_id': ws.id})
 
 
-@history_bp.route('/live/cancel/<int:session_id>', methods=['POST'])
+@history_bp.route('/live/cancel/<path:session_id>', methods=['POST'])
 @login_required
 def cancel_live(session_id):
-    ws = WorkoutSession.query.filter_by(
-        id=session_id, user_id=current_user.id).first()
+    if session_id == 'pending':
+        return jsonify({'ok': True})  # Nothing was created
+    try:
+        sid = int(session_id)
+    except ValueError:
+        return jsonify({'ok': True})
+    ws = WorkoutSession.query.filter_by(id=sid, user_id=current_user.id).first()
     if ws:
         count = SessionExercise.query.filter_by(session_id=ws.id).count()
         if count == 0:
@@ -291,23 +307,17 @@ def save_live():
     group_ids   = [int(g) for g in request.form.getlist('muscle_group_ids') if g.isdigit()]
 
     ws = None
-    if session_id:
-        ws = WorkoutSession.query.filter_by(
-            id=int(session_id), user_id=current_user.id).first()
+    if session_id and session_id != 'pending':
+        try:
+            ws = WorkoutSession.query.filter_by(
+                id=int(session_id), user_id=current_user.id).first()
+        except (ValueError, TypeError):
+            ws = None
 
+    # If no session was ever created (user never saved an exercise), abort
     if not ws:
-        ws = WorkoutSession(
-            user_id=current_user.id,
-            plan_id=int(request.form.get('plan_id')) if request.form.get('plan_id') else None,
-            date=_today_brazil()
-        )
-        db.session.add(ws)
-        db.session.flush()
-
-    ws.duration_minutes = int(duration) if duration else None
-    ws.custom_name = custom_name or None
-    if group_ids:
-        _attach_muscle_groups(ws, group_ids)
+        flash('Nenhum exercício registrado. Treino não salvo.', 'info')
+        return redirect(url_for('history.start'))
 
     # Count exercises already saved via real-time saves
     saved_count = SessionExercise.query.filter_by(session_id=ws.id).count()
@@ -317,6 +327,11 @@ def save_live():
         db.session.commit()
         flash('Nenhum exercício registrado. Treino não salvo.', 'info')
         return redirect(url_for('history.start'))
+
+    ws.duration_minutes = int(duration) if duration else None
+    ws.custom_name = custom_name or None
+    if group_ids:
+        _attach_muscle_groups(ws, group_ids)
 
     db.session.commit()
     flash(f'Treino finalizado com {saved_count} série(s) registrada(s)!', 'success')
