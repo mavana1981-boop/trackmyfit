@@ -15,7 +15,6 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
     sessions = db.relationship('WorkoutSession', backref='user', lazy=True, cascade='all, delete-orphan')
     plans = db.relationship('WorkoutPlan', backref='user', lazy=True, cascade='all, delete-orphan')
 
@@ -24,7 +23,7 @@ class MuscleGroup(db.Model):
     __tablename__ = 'muscle_groups'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    icon = db.Column(db.String(50))  # emoji or icon class
+    icon = db.Column(db.String(50))
     exercises = db.relationship('Exercise', backref='muscle_group', lazy=True)
 
     def exercise_count(self):
@@ -34,10 +33,10 @@ class MuscleGroup(db.Model):
 class Exercise(db.Model):
     __tablename__ = 'exercises'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
+    name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
-    difficulty = db.Column(db.String(20), default='Intermediário')  # Iniciante, Intermediário, Avançado
+    difficulty = db.Column(db.String(20), default='Intermediário')
     equipment = db.Column(db.String(100))
     muscle_group_id = db.Column(db.Integer, db.ForeignKey('muscle_groups.id'), nullable=False)
 
@@ -49,6 +48,8 @@ class WorkoutPlan(db.Model):
     description = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    sort_order = db.Column(db.Integer, default=0)
+    muscle_groups = db.relationship('MuscleGroup', secondary='plan_muscle_groups', lazy=True)
     plan_exercises = db.relationship('PlanExercise', backref='plan', lazy=True, cascade='all, delete-orphan')
 
 
@@ -58,10 +59,28 @@ class PlanExercise(db.Model):
     plan_id = db.Column(db.Integer, db.ForeignKey('workout_plans.id'), nullable=False)
     exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.id'), nullable=False)
     sets = db.Column(db.Integer, default=3)
-    reps = db.Column(db.String(20), default='10-12')
+    reps = db.Column(db.String(100), default='10-12')
     rest_seconds = db.Column(db.Integer, default=60)
     order = db.Column(db.Integer, default=0)
+    suggested_weight = db.Column(db.Float, nullable=True)  # AI-suggested next weight
+    notes = db.Column(db.Text, nullable=True)  # Coach instructions shown in live workout
+    series_data = db.Column(db.Text, nullable=True)  # JSON: [{reps, weight}, ...] per series
     exercise = db.relationship('Exercise')
+
+
+# Junction table: muscle groups associated with a plan
+plan_muscle_groups = db.Table(
+    'plan_muscle_groups',
+    db.Column('plan_id', db.Integer, db.ForeignKey('workout_plans.id'), primary_key=True),
+    db.Column('muscle_group_id', db.Integer, db.ForeignKey('muscle_groups.id'), primary_key=True)
+)
+
+# Junction table: which muscle groups were trained in a session (explicit, user-selected)
+session_muscle_groups = db.Table(
+    'session_muscle_groups',
+    db.Column('session_id', db.Integer, db.ForeignKey('workout_sessions.id'), primary_key=True),
+    db.Column('muscle_group_id', db.Integer, db.ForeignKey('muscle_groups.id'), primary_key=True)
+)
 
 
 class WorkoutSession(db.Model):
@@ -69,12 +88,35 @@ class WorkoutSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     plan_id = db.Column(db.Integer, db.ForeignKey('workout_plans.id'), nullable=True)
+    # Custom name shown in history (overrides plan name)
+    custom_name = db.Column(db.String(150), nullable=True)
     date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
     notes = db.Column(db.Text)
     duration_minutes = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Explicit muscle groups selected by user
+    muscle_groups = db.relationship('MuscleGroup', secondary=session_muscle_groups, lazy=True)
     session_exercises = db.relationship('SessionExercise', backref='session', lazy=True, cascade='all, delete-orphan')
     plan = db.relationship('WorkoutPlan')
+
+    @property
+    def display_name(self):
+        if self.custom_name:
+            return self.custom_name
+        if self.plan:
+            return self.plan.name
+        return 'Treino Avulso'
+
+    @property
+    def effective_muscle_groups(self):
+        """Explicit groups first; fall back to groups inferred from exercises."""
+        if self.muscle_groups:
+            return self.muscle_groups
+        seen = {}
+        for se in self.session_exercises:
+            mg = se.exercise.muscle_group
+            seen[mg.id] = mg
+        return list(seen.values())
 
 
 class SessionExercise(db.Model):
@@ -86,6 +128,7 @@ class SessionExercise(db.Model):
     reps_done = db.Column(db.String(20))
     weight_kg = db.Column(db.Float)
     notes = db.Column(db.Text)
+    effort_level = db.Column(db.String(10), nullable=True)  # easy, ok, hard
     exercise = db.relationship('Exercise')
 
 
@@ -161,14 +204,10 @@ def seed_data():
         db.session.flush()
         for ex_data in exercises:
             ex = Exercise(
-                name=ex_data[0],
-                description=ex_data[1],
-                instructions=ex_data[2],
-                difficulty=ex_data[3],
-                equipment=ex_data[4],
-                muscle_group_id=group.id
+                name=ex_data[0], description=ex_data[1], instructions=ex_data[2],
+                difficulty=ex_data[3], equipment=ex_data[4], muscle_group_id=group.id
             )
             db.session.add(ex)
 
     db.session.commit()
-    print("✅ Seed data inserted successfully!")
+    print('✅ Seed data inserted successfully!')
