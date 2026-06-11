@@ -4,39 +4,38 @@
 {% block topbar %}
 <div class="topbar">
     <a href="{{ url_for('main.dashboard') }}" class="topbar-back">←</a>
-    <h1>COMEÇAR TREINO</h1>
+    <h1>Treinar</h1>
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-.mode-card { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:16px 18px; margin-bottom:10px; display:flex; align-items:center; gap:16px; cursor:pointer; transition:all 0.15s; color:var(--text); }
+.mode-card { background:var(--bg3); border:1px solid var(--border); border-radius:13px; padding:15px 17px; margin-bottom:10px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:all 0.15s; color:var(--text); text-decoration:none; }
 .mode-card:active { transform:scale(0.98); }
 .mode-card.active { border-color:var(--red); background:var(--red-glow); }
-.mode-icon { font-size:1.8rem; flex-shrink:0; width:44px; height:44px; background:var(--bg4); border-radius:11px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); }
-.mode-title { font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px; margin-bottom:2px; }
-.mode-sub { font-size:0.72rem; color:var(--text2); line-height:1.4; }
+.mode-icon { width:42px; height:42px; background:var(--bg4); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; border:1px solid var(--border); }
+.mode-title { font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.4px; margin-bottom:2px; }
+.mode-sub { font-size:0.7rem; color:var(--text2); }
 
 /* Plan cards */
-.plan-card-sel { background:var(--bg3); border:1px solid var(--border); border-radius:12px; margin-bottom:10px; overflow:hidden; transition:all 0.15s; }
-.plan-card-header { display:flex; align-items:center; gap:10px; padding:14px 16px; }
-.plan-card-title { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; flex:1; }
-.plan-card-meta { font-size:0.7rem; color:var(--text2); margin-top:2px; }
-.start-btn-inline { background:var(--red); color:white; border:none; border-radius:8px; padding:10px 16px; font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px; cursor:pointer; flex-shrink:0; text-decoration:none; display:inline-flex; align-items:center; gap:4px; }
+.plan-sel { background:var(--bg3); border:1px solid var(--border); border-radius:12px; margin-bottom:8px; overflow:hidden; }
+.plan-sel-header { display:flex; align-items:center; gap:10px; padding:13px 15px; cursor:pointer; }
+.plan-sel-name { font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.4px; flex:1; }
+.plan-sel-meta { font-size:0.68rem; color:var(--text2); display:flex; gap:4px; flex-wrap:wrap; margin-top:2px; }
+.plan-tag { background:var(--bg4); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:0.6rem; color:var(--text2); }
+.start-inline { background:var(--red); color:white; border:none; border-radius:7px; padding:9px 14px; font-family:'Bebas Neue',sans-serif; font-size:0.88rem; cursor:pointer; flex-shrink:0; text-decoration:none; display:inline-flex; }
 
 /* Exercise preview */
-.ex-preview-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 16px 14px; }
-.ex-preview-card { background:var(--bg4); border:1px solid var(--border); border-radius:10px; padding:11px 10px; }
-.gc-icon { font-size:1.2rem; margin-bottom:5px; }
-.gc-name { font-weight:700; font-size:0.78rem; line-height:1.3; margin-bottom:3px; }
-.gc-meta { font-size:0.65rem; color:var(--text2); }
+.ex-prev-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0 15px 13px; }
+.ex-prev-card { background:var(--bg4); border:1px solid var(--border); border-radius:9px; padding:10px; }
+.ep-group { font-size:0.56rem; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
+.ep-name { font-weight:700; font-size:0.78rem; line-height:1.3; margin-bottom:3px; }
+.ep-meta { font-size:0.64rem; color:var(--text2); }
 
 /* Group grid */
-.group-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.group-btn { background:var(--bg4); border:1px solid var(--border); border-radius:12px; padding:14px 10px; text-align:center; cursor:pointer; transition:all 0.15s; font-weight:700; font-size:0.78rem; color:var(--text2); display:flex; flex-direction:column; gap:6px; align-items:center; }
-.group-btn:active { transform:scale(0.96); }
-.group-btn.selected { border-color:var(--red); background:var(--red-glow); color:var(--red); }
-.g-icon { font-size:1.6rem; }
+.group-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+.group-tile { background:var(--bg3); border:1.5px solid var(--border); border-radius:10px; padding:12px 5px; text-align:center; cursor:pointer; transition:all 0.15s; font-size:0.7rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; }
+.group-tile.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
 </style>
 {% endblock %}
 
@@ -47,18 +46,18 @@
         <span class="section-title">Como quer treinar?</span>
     </div>
 
-    <div class="mode-card" onclick="selectMode('plan')" id="modePlan">
-        <div class="mode-icon">📋</div>
+    <div onclick="selectMode('plan')" id="modePlan" class="mode-card">
+        <div class="mode-icon">▣</div>
         <div>
-            <div class="mode-title">COM PLANO</div>
-            <div class="mode-sub">Selecione um plano pré-formulado com séries e cargas definidas</div>
+            <div class="mode-title">Com Plano</div>
+            <div class="mode-sub">Plano pré-formulado com séries e cargas</div>
         </div>
     </div>
-    <div class="mode-card" onclick="selectMode('free')" id="modeFree">
-        <div class="mode-icon">⚡</div>
+    <div onclick="selectMode('free')" id="modeFree" class="mode-card">
+        <div class="mode-icon">◈</div>
         <div>
-            <div class="mode-title">TREINO AVULSO</div>
-            <div class="mode-sub">Escolha grupos musculares e monte na hora</div>
+            <div class="mode-title">Treino Avulso</div>
+            <div class="mode-sub">Escolha grupos e exercícios livremente</div>
         </div>
     </div>
 
@@ -67,61 +66,106 @@
         <div class="section-header" style="margin-bottom:10px;">
             <span class="section-title">Escolha o plano</span>
         </div>
-
         {% if plans %}
             {% for plan in plans %}
-            <div class="plan-card-sel" id="planCard{{ plan.id }}">
-                <div class="plan-card-header">
+            <div class="plan-sel" id="planCard{{ plan.id }}">
+                <div class="plan-sel-header">
                     <div style="flex:1; cursor:pointer;" onclick="togglePreview({{ plan.id }})">
-                        <div class="plan-card-title">{{ plan.name }}</div>
-                        <div class="plan-card-meta" style="display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin-top:3px;">
-                            <span>{{ plan.plan_exercises|length }} exerc.</span>
-                            {% for g in plan.muscle_groups %}
-                            <span style="background:var(--bg4); border:1px solid var(--border); border-radius:5px; padding:1px 6px; font-size:0.62rem; font-weight:700; color:var(--text2);">{{ g.name }}</span>
-                            {% endfor %}
+                        <div class="plan-sel-name">{{ plan.name }}</div>
+                        <div class="plan-sel-meta">
+                            <span class="plan-tag">{{ plan.plan_exercises|length }} exerc.</span>
+                            {% for g in plan.muscle_groups %}<span class="plan-tag">{{ g.name }}</span>{% endfor %}
                         </div>
                     </div>
-                    <a href="/live/{{ plan.id }}" class="start-btn-inline">▶ INICIAR</a>
+                    <a href="/live/{{ plan.id }}" class="start-inline">Iniciar</a>
                 </div>
-                <!-- Exercise preview (toggle) -->
-                <div class="ex-preview-grid" id="prev{{ plan.id }}" style="display:none;">
-                    {% for pe in plan.plan_exercises | sort(attribute='order') %}
-                    <div class="ex-preview-card">
-                        <div class="gc-icon">{{ pe.exercise.muscle_group.icon }}</div>
-                        <div class="gc-name">{{ pe.exercise.name }}</div>
-                        <div class="gc-meta">{{ pe.sets }}× {{ pe.reps }} reps</div>
+                <div id="prev{{ plan.id }}" style="display:none;">
+                    <div class="ex-prev-grid">
+                        {% for pe in plan.plan_exercises | sort(attribute='order') %}
+                        <div class="ex-prev-card">
+                            <div class="ep-group">{{ pe.exercise.muscle_group.name }}</div>
+                            <div class="ep-name">{{ pe.exercise.name }}</div>
+                            <div class="ep-meta">{{ pe.sets }}× {{ pe.reps }}</div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
             </div>
             {% endfor %}
         {% else %}
-            <div class="empty-state" style="padding:24px 0;">
-                <div class="empty-icon">📋</div>
-                <div class="empty-title">Nenhum plano criado</div>
-                <a href="{{ url_for('workouts.index') }}" class="btn btn-red" style="margin-top:12px;">Criar Plano</a>
+            <div style="text-align:center; padding:24px; color:var(--text2);">
+                <div style="font-size:0.82rem; margin-bottom:12px;">Nenhum plano criado</div>
+                <a href="{{ url_for('workouts.index') }}" class="btn btn-red btn-sm">Criar plano</a>
             </div>
         {% endif %}
     </div>
 
-    <!-- Free workout -->
+    <!-- Free section -->
     <div id="freeSection" style="display:none; margin-top:20px;">
         <div class="section-header" style="margin-bottom:10px;">
             <span class="section-title">Grupos musculares</span>
         </div>
-        <div class="group-grid">
+        <div class="group-grid-3" style="margin-bottom:14px;">
             {% for group in groups %}
-            <div class="group-btn" onclick="toggleGroup({{ group.id }}, this)">
-                <span class="g-icon">{{ group.icon }}</span>
+            <div class="group-tile" data-id="{{ group.id }}" data-name="{{ group.name }}"
+                 onclick="toggleGroup({{ group.id }}, '{{ group.name }}', this)">
                 {{ group.name }}
             </div>
             {% endfor %}
         </div>
-        <button onclick="startFree()" id="btnStartFree" disabled
-            class="btn btn-red btn-block btn-lg"
-            style="margin-top:16px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:1px;">
-            ▶ INICIAR TREINO AVULSO
-        </button>
+
+        <!-- Exercise list per group (shown after selection) -->
+        <div id="exSection" style="display:none;">
+            <div class="tab-row" style="display:flex; background:var(--bg3); border-radius:50px; padding:3px; margin-bottom:14px;">
+                <button class="tab-btn on" id="tabExLib" onclick="showExTab('lib')" style="flex:1; padding:8px; border:none; border-radius:50px; background:var(--red); color:white; font-weight:700; font-size:0.75rem; cursor:pointer; text-transform:uppercase;">Exercícios</button>
+                <button class="tab-btn" id="tabExCustom" onclick="showExTab('custom')" style="flex:1; padding:8px; border:none; border-radius:50px; background:transparent; color:var(--text2); font-weight:700; font-size:0.75rem; cursor:pointer; text-transform:uppercase;">Personalizado</button>
+            </div>
+
+            <!-- Library tab -->
+            <div id="exLibView">
+                <div id="exListContainer" style="background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:12px;">
+                    <div style="padding:12px 14px; font-size:0.78rem; color:var(--text2);">Selecione um grupo acima</div>
+                </div>
+                <button onclick="startFreeWithSel()" id="btnStartFree" disabled class="btn btn-red btn-block"
+                    style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+                    Iniciar com selecionados
+                </button>
+            </div>
+
+            <!-- Custom tab -->
+            <div id="exCustomView" style="display:none;">
+                <div style="background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px;">
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label class="form-label">Nome do exercício</label>
+                        <input type="text" id="customExName" class="form-control" placeholder="Ex: Supino 45 graus">
+                    </div>
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label class="form-label">Grupo muscular</label>
+                        <select id="customExGroup" class="form-control">
+                            {% for group in groups %}
+                            <option value="{{ group.id }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="customSets">
+                        <div class="form-label" style="margin-bottom:6px;">Séries</div>
+                        <div id="setsList"></div>
+                    </div>
+                    <button onclick="addCustomSet()" class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;">
+                        + Adicionar série
+                    </button>
+                </div>
+                <button onclick="addCustomExercise()" class="btn btn-red btn-block"
+                    style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+                    Adicionar exercício personalizado
+                </button>
+                <div id="customExList" style="margin-top:12px;"></div>
+                <button onclick="startCustom()" id="btnStartCustom" style="display:none; margin-top:8px;" class="btn btn-success btn-block"
+                    style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem;">
+                    Iniciar treino personalizado
+                </button>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -129,8 +173,23 @@
 
 {% block extra_js %}
 <script>
-let selectedGroups = [];
+// All exercises by group (from server)
+const exercisesByGroup = {
+    {% for group in groups %}
+    {{ group.id }}: [
+        {% for ex in group.exercises %}
+        { id: {{ ex.id }}, name: "{{ ex.name|replace('"', '\\"') }}" },
+        {% endfor %}
+    ],
+    {% endfor %}
+};
 
+let selectedGroups = [];
+let selectedExIds = new Set();
+let customExercises = []; // [{name, group_id, sets:[{weight,reps}]}]
+let customSetCount = 0;
+
+// Mode selection
 function selectMode(mode) {
     document.getElementById('planSection').style.display = mode === 'plan' ? 'block' : 'none';
     document.getElementById('freeSection').style.display = mode === 'free' ? 'block' : 'none';
@@ -138,21 +197,126 @@ function selectMode(mode) {
     document.getElementById('modeFree').classList.toggle('active', mode === 'free');
 }
 
+// Plan preview
 function togglePreview(planId) {
-    const prev = document.getElementById('prev' + planId);
-    prev.style.display = prev.style.display === 'grid' ? 'none' : 'grid';
+    const el = document.getElementById('prev'+planId);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-function toggleGroup(id, el) {
-    const idx = selectedGroups.indexOf(id);
-    if (idx === -1) { selectedGroups.push(id); el.classList.add('selected'); }
-    else { selectedGroups.splice(idx, 1); el.classList.remove('selected'); }
-    document.getElementById('btnStartFree').disabled = selectedGroups.length === 0;
+// Group toggle
+function toggleGroup(id, name, el) {
+    el.classList.toggle('sel');
+    if (el.classList.contains('sel')) {
+        if (!selectedGroups.includes(id)) selectedGroups.push(id);
+    } else {
+        selectedGroups = selectedGroups.filter(g => g !== id);
+    }
+    renderExList();
+    document.getElementById('exSection').style.display = selectedGroups.length > 0 ? 'block' : 'none';
 }
 
-function startFree() {
-    if (selectedGroups.length > 0)
+// Render exercise list for selected groups
+function renderExList() {
+    const container = document.getElementById('exListContainer');
+    if (selectedGroups.length === 0) {
+        container.innerHTML = '<div style="padding:12px 14px; font-size:0.78rem; color:var(--text2);">Selecione um grupo acima</div>';
+        return;
+    }
+    let html = '';
+    selectedGroups.forEach(gid => {
+        const exs = exercisesByGroup[gid] || [];
+        exs.forEach(ex => {
+            const sel = selectedExIds.has(ex.id);
+            html += `<div class="ex-sel-row" id="exRow${ex.id}" onclick="toggleEx(${ex.id})"
+                style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; ${sel ? 'background:rgba(232,25,44,0.05);' : ''}">
+                <div style="flex:1; font-weight:600; font-size:0.84rem;">${ex.name}</div>
+                <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid ${sel ? 'var(--red)' : 'var(--border2)'}; background:${sel ? 'var(--red)' : 'transparent'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    ${sel ? '<span style="color:white; font-size:0.7rem; font-weight:700;">✓</span>' : ''}
+                </div>
+            </div>`;
+        });
+    });
+    if (!html) html = '<div style="padding:12px 14px; font-size:0.78rem; color:var(--text2);">Nenhum exercício encontrado</div>';
+    container.innerHTML = html;
+    document.getElementById('btnStartFree').disabled = selectedExIds.size === 0 && selectedGroups.length === 0;
+}
+
+function toggleEx(id) {
+    if (selectedExIds.has(id)) selectedExIds.delete(id);
+    else selectedExIds.add(id);
+    renderExList();
+    document.getElementById('btnStartFree').disabled = selectedExIds.size === 0;
+}
+
+function startFreeWithSel() {
+    // If specific exercises selected, use custom route
+    // Otherwise use group-based route
+    if (selectedExIds.size > 0) {
+        // Build a free session with specific exercise IDs
+        // We'll pass as group IDs for now — simplest approach
+        window.location.href = '/live/free?groups=' + selectedGroups.join(',') + '&exids=' + [...selectedExIds].join(',');
+    } else {
         window.location.href = '/live/free?groups=' + selectedGroups.join(',');
+    }
+}
+
+// Custom exercise
+function showExTab(tab) {
+    document.getElementById('exLibView').style.display = tab === 'lib' ? 'block' : 'none';
+    document.getElementById('exCustomView').style.display = tab === 'custom' ? 'block' : 'none';
+    document.getElementById('tabExLib').style.background = tab === 'lib' ? 'var(--red)' : 'transparent';
+    document.getElementById('tabExLib').style.color = tab === 'lib' ? 'white' : 'var(--text2)';
+    document.getElementById('tabExCustom').style.background = tab === 'custom' ? 'var(--red)' : 'transparent';
+    document.getElementById('tabExCustom').style.color = tab === 'custom' ? 'white' : 'var(--text2)';
+    if (tab === 'custom' && document.getElementById('setsList').children.length === 0) addCustomSet();
+}
+
+function addCustomSet() {
+    customSetCount++;
+    const div = document.createElement('div');
+    div.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 24px; gap:6px; margin-bottom:6px; align-items:center;';
+    div.innerHTML = `
+        <input type="number" class="form-control" placeholder="Kg" id="cs_w${customSetCount}" step="0.5" min="0">
+        <input type="text"   class="form-control" placeholder="Reps" id="cs_r${customSetCount}">
+        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:1rem;">✕</button>
+    `;
+    document.getElementById('setsList').appendChild(div);
+}
+
+function addCustomExercise() {
+    const name = document.getElementById('customExName').value.trim();
+    const groupId = parseInt(document.getElementById('customExGroup').value);
+    if (!name) { alert('Digite o nome do exercício'); return; }
+    const sets = [];
+    document.querySelectorAll('#setsList > div').forEach((row, i) => {
+        customSetCount++;
+        const w = row.querySelector('input[type="number"]').value;
+        const r = row.querySelector('input[type="text"]').value;
+        if (r) sets.push({ weight: w || null, reps: r });
+    });
+    if (sets.length === 0) sets.push({ weight: null, reps: '10' });
+    customExercises.push({ name, group_id: groupId, sets });
+
+    // Show added exercise
+    const list = document.getElementById('customExList');
+    const d = document.createElement('div');
+    d.style.cssText = 'background:var(--bg3); border:1px solid var(--border); border-radius:9px; padding:10px 13px; margin-bottom:6px; font-size:0.82rem;';
+    d.innerHTML = `<strong>${name}</strong> — ${sets.length} série(s)`;
+    list.appendChild(d);
+
+    // Reset form
+    document.getElementById('customExName').value = '';
+    document.getElementById('setsList').innerHTML = '';
+    customSetCount = 0;
+    addCustomSet();
+    document.getElementById('btnStartCustom').style.display = 'block';
+}
+
+function startCustom() {
+    if (customExercises.length === 0) return;
+    // Store in sessionStorage and redirect
+    sessionStorage.setItem('customWorkout', JSON.stringify(customExercises));
+    window.location.href = '/live/custom';
 }
 </script>
 {% endblock %}
