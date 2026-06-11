@@ -74,9 +74,11 @@
                 <div class="plan-card-header">
                     <div style="flex:1; cursor:pointer;" onclick="togglePreview({{ plan.id }})">
                         <div class="plan-card-title">{{ plan.name }}</div>
-                        <div class="plan-card-meta">
-                            {{ plan.plan_exercises|length }} exercício{% if plan.plan_exercises|length != 1 %}s{% endif %}
-                            {% if plan.muscle_groups %} · {% for g in plan.muscle_groups %}{{ g.icon }}{% endfor %}{% endif %}
+                        <div class="plan-card-meta" style="display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin-top:3px;">
+                            <span>{{ plan.plan_exercises|length }} exerc.</span>
+                            {% for g in plan.muscle_groups %}
+                            <span style="background:var(--bg4); border:1px solid var(--border); border-radius:5px; padding:1px 6px; font-size:0.62rem; font-weight:700; color:var(--text2);">{{ g.name }}</span>
+                            {% endfor %}
                         </div>
                     </div>
                     <a href="/live/{{ plan.id }}" class="start-btn-inline">▶ INICIAR</a>
@@ -154,4 +156,3 @@ function startFree() {
 }
 </script>
 {% endblock %}
- 
