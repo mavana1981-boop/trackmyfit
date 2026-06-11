@@ -9,7 +9,8 @@
         <div style="font-size:0.58rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Ao vivo</div>
         <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px;">{{ plan_name }}</h1>
     </div>
-    <div id="timer" style="font-family:'Bebas Neue',sans-serif; font-size:1.3rem; color:var(--red); min-width:52px; text-align:right; letter-spacing:1px;">0:00</div>
+    <!-- Clock showing current time -->
+    <div id="clock" style="font-family:'Bebas Neue',sans-serif; font-size:1.3rem; color:var(--text2); min-width:58px; text-align:right; letter-spacing:1px;">00:00:00</div>
 </div>
 {% endblock %}
 
@@ -19,37 +20,27 @@
 #overviewScreen { padding:16px; max-width:480px; margin:0 auto; padding-bottom:32px; }
 .ov-title { font-size:0.65rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
 .ex-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.ex-grid-card {
-    background:var(--bg3); border:1px solid var(--border);
-    border-radius:12px; padding:14px 12px; cursor:pointer;
-    transition:all 0.15s; position:relative; overflow:hidden;
-}
+.ex-grid-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px 12px; cursor:pointer; transition:all 0.15s; position:relative; overflow:hidden; }
 .ex-grid-card:active { transform:scale(0.96); }
-/* Only red when explicitly marked has-data (weight+reps entered) */
 .ex-grid-card.has-data { border-color:var(--red); background:rgba(232,25,44,0.07); }
 .ex-grid-card.has-data::after { content:'✓'; position:absolute; top:8px; right:10px; font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--red); }
-.gc-icon { font-size:1.4rem; margin-bottom:8px; }
-.gc-name { font-weight:700; font-size:0.82rem; line-height:1.3; margin-bottom:5px; }
+.gc-icon { font-size:1.4rem; margin-bottom:6px; }
+.gc-name { font-weight:700; font-size:0.82rem; line-height:1.3; margin-bottom:4px; }
 .gc-meta { font-size:0.68rem; color:var(--text2); }
 
 /* ── Detail screen ── */
 #detailScreen { display:none; }
-.back-bar { padding:12px 16px 0; max-width:480px; margin:0 auto; }
 .ex-nav { display:flex; gap:5px; padding:10px 16px; overflow-x:auto; background:var(--bg2); border-bottom:1px solid var(--border); scrollbar-width:none; }
 .ex-nav::-webkit-scrollbar { display:none; }
-.ex-dot {
-    width:32px; height:32px; border-radius:50%; flex-shrink:0;
-    background:var(--bg4); border:1.5px solid var(--border2);
-    font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3);
-    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;
-}
-.ex-dot.active   { background:var(--bg3); border-color:var(--text2); color:var(--text); }
+.ex-dot { width:32px; height:32px; border-radius:50%; flex-shrink:0; background:var(--bg4); border:1.5px solid var(--border2); font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+.ex-dot.active { background:var(--bg3); border-color:var(--text2); color:var(--text); }
 .ex-dot.has-data { background:var(--red); border-color:var(--red); color:white; }
 .ex-dot.has-data.active { box-shadow:0 0 0 3px rgba(232,25,44,0.3); }
 
 .ex-card { display:none; }
 .ex-card.active { display:block; }
 
+/* Hero */
 .ex-hero { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:12px; position:relative; overflow:hidden; }
 .ex-hero::after { content:''; position:absolute; top:-30px; right:-30px; width:110px; height:110px; border-radius:50%; background:var(--red-glow); pointer-events:none; }
 .ex-group { font-size:0.6rem; color:var(--red); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
@@ -63,49 +54,28 @@
 .set-row:last-child { border-bottom:none; }
 .set-row.done-row { background:rgba(232,25,44,0.04); }
 .set-num { font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3); text-align:center; }
+.set-input-wrap { position:relative; }
 .set-input { background:var(--bg4); border:1px solid var(--border2); border-radius:8px; color:var(--text); font-size:0.95rem; font-weight:700; text-align:center; padding:9px 4px; width:100%; outline:none; transition:border-color 0.15s; }
 .set-input:focus { border-color:var(--red); }
+.suggest-label { position:absolute; bottom:-14px; left:0; right:0; text-align:center; font-size:0.52rem; color:var(--text3); white-space:nowrap; font-style:italic; pointer-events:none; }
+.set-reps { background:var(--bg4); border:1px solid var(--border2); border-radius:8px; color:var(--text); font-size:0.95rem; font-weight:700; text-align:center; padding:9px 4px; width:100%; outline:none; transition:border-color 0.15s; }
+.set-reps:focus { border-color:var(--red); }
 .set-check { background:var(--bg4); border:1px solid var(--border2); border-radius:8px; color:var(--text3); font-size:1rem; padding:8px 0; cursor:pointer; width:100%; transition:all 0.15s; display:flex; align-items:center; justify-content:center; }
 .set-check.done { background:rgba(232,25,44,0.12); border-color:rgba(232,25,44,0.3); color:var(--red); }
 
-/* Effort */
-.effort-section { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
-.effort-label { font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
-.effort-btns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-.effort-btn {
-    border-radius:10px; padding:12px 6px; border:1.5px solid var(--border);
-    background:var(--bg4); cursor:pointer; transition:all 0.15s; text-align:center;
-    font-size:0.72rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.4px;
-}
-.effort-btn .ef-emoji { font-size:1.6rem; display:block; margin-bottom:5px; }
-.effort-btn:active { transform:scale(0.95); }
-.effort-btn.sel-easy  { border-color:#30D158; background:rgba(48,209,88,0.12); color:#30D158; }
-.effort-btn.sel-ok    { border-color:#FFB800; background:rgba(255,184,0,0.12); color:#FFB800; }
-.effort-btn.sel-hard  { border-color:#E8192C; background:rgba(232,25,44,0.12); color:#E8192C; }
-
-/* Suggest weight banner */
-.suggest-banner {
-    background:rgba(48,209,88,0.08); border:1px solid rgba(48,209,88,0.25);
-    border-radius:12px; padding:14px; margin-bottom:12px;
-    display:none;
-}
-.suggest-banner.show { display:block; }
-.suggest-text { font-size:0.84rem; color:#30D158; font-weight:600; margin-bottom:10px; line-height:1.4; }
-.suggest-actions { display:flex; gap:8px; }
-.suggest-yes { background:rgba(48,209,88,0.15); border:1px solid rgba(48,209,88,0.3); color:#30D158; border-radius:8px; padding:8px 16px; font-weight:700; font-size:0.8rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.4px; }
-.suggest-no  { background:var(--bg4); border:1px solid var(--border); color:var(--text2); border-radius:8px; padding:8px 16px; font-weight:700; font-size:0.8rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.4px; }
-
-/* History */
+/* History table */
 .hist-section { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
-.hist-bars { display:flex; align-items:flex-end; gap:5px; height:52px; margin:8px 0 4px; }
-.hist-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; }
-.hist-bar { width:100%; background:var(--red); border-radius:3px 3px 0 0; min-height:3px; opacity:0.7; }
-.hist-val  { font-size:0.58rem; font-weight:700; color:var(--text2); }
-.hist-date { font-size:0.54rem; color:var(--text3); }
+.hist-table { width:100%; border-collapse:collapse; margin-top:8px; }
+.hist-table th { font-size:0.58rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.6px; padding:4px 8px; text-align:center; border-bottom:1px solid var(--border); }
+.hist-table td { font-size:0.8rem; padding:8px; text-align:center; border-bottom:1px solid var(--border); }
+.hist-table tr:last-child td { border-bottom:none; }
+.hist-table td.date-col { color:var(--text2); font-size:0.72rem; text-align:left; }
+.hist-table td.weight-col { font-family:'Bebas Neue',sans-serif; font-size:0.95rem; color:var(--red); }
+.hist-table td.reps-col { font-weight:600; }
 
-/* Single OK button */
-.ok-btn { width:100%; padding:16px; background:var(--bg3); border:1px solid var(--border); border-radius:12px; color:var(--text); font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:1px; cursor:pointer; transition:all 0.15s; margin-bottom:12px; }
-.ok-btn:active { transform:scale(0.98); background:var(--bg4); }
+/* OK button */
+.ok-btn { width:100%; padding:15px; background:rgba(48,209,88,0.12); border:1.5px solid rgba(48,209,88,0.3); color:var(--success); border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; cursor:pointer; margin-bottom:12px; transition:all 0.15s; }
+.ok-btn:active { transform:scale(0.98); }
 
 /* Finish modal */
 .finish-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:300; flex-direction:column; overflow-y:auto; }
@@ -114,19 +84,12 @@
 .group-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .group-chip { display:inline-flex; align-items:center; gap:5px; background:var(--bg4); border:1.5px solid var(--border); border-radius:9px; padding:8px 12px; cursor:pointer; transition:all 0.15s; font-weight:700; font-size:0.76rem; color:var(--text2); user-select:none; text-transform:uppercase; letter-spacing:0.4px; }
 .group-chip.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
-
-/* Rest overlay */
-.rest-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:200; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
-.rest-overlay.active { display:flex; }
-.rest-ring { width:140px; height:140px; border-radius:50%; border:3px solid var(--red); background:var(--bg3); display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 0 40px var(--red-glow); }
-.rest-num { font-family:'Bebas Neue',sans-serif; font-size:3.5rem; color:var(--red); line-height:1; letter-spacing:2px; }
-.rest-lbl { font-size:0.65rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:1px; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ══ SCREEN 1: Overview grid ══ -->
+<!-- SCREEN 1: Overview grid -->
 <div id="overviewScreen">
     <div class="ov-title">SELECIONE O EXERCÍCIO</div>
     <div class="ex-grid" id="exGrid">
@@ -146,7 +109,7 @@
     </div>
 </div>
 
-<!-- ══ SCREEN 2: Exercise detail ══ -->
+<!-- SCREEN 2: Exercise detail -->
 <div id="detailScreen">
     <div class="ex-nav" id="exNav">
         {% for ex in exercises %}
@@ -165,86 +128,69 @@
                 <div style="display:flex; gap:6px; flex-wrap:wrap; position:relative; z-index:1;">
                     <span class="badge badge-muted">{{ ex.sets }}× SÉRIES</span>
                     <span class="badge badge-muted">{{ ex.reps }} REPS</span>
-                    {% if ex.weight %}<span class="badge badge-red" id="curW{{ loop.index0 }}">{{ ex.weight }}kg</span>{% endif %}
-                    <span class="badge badge-muted">{{ ex.rest_seconds }}S</span>
+                    {% if ex.weight %}<span class="badge badge-red">{{ ex.weight }}kg</span>{% endif %}
                 </div>
             </div>
 
             <!-- Sets table -->
             <div class="sets-wrap">
-                <div class="sets-head"><span>#</span><span>KG</span><span>REPS</span><span>✓</span></div>
+                <div class="sets-head">
+                    <span>#</span><span>KG</span><span>REPS</span><span>✓</span>
+                </div>
                 {% for s in range(ex.sets) %}
                 <div class="set-row" id="sr{{ loop.index0 }}_{{ s }}">
                     <div class="set-num">{{ s+1 }}</div>
-                    <input class="set-input" type="number" step="0.5" min="0"
-                        id="w{{ loop.index0 }}_{{ s }}"
-                        value="{{ ex.weight or '' }}" placeholder="—"
-                        oninput="onDataInput({{ loop.index0 }})">
-                    <input class="set-input" type="text"
+                    <div class="set-input-wrap">
+                        <input class="set-input" type="number" step="0.5" min="0"
+                            id="w{{ loop.index0 }}_{{ s }}"
+                            value="{{ ex.weight or '' }}" placeholder="—"
+                            oninput="onDataInput({{ loop.index0 }})">
+                        {% if ex.suggest_increase and s == 0 %}
+                        <div class="suggest-label">cogite aumentar peso</div>
+                        {% endif %}
+                    </div>
+                    <input class="set-reps" type="text"
                         id="r{{ loop.index0 }}_{{ s }}"
                         value="{{ ex.reps }}" placeholder="—"
-                        oninput="onDataInput({{ loop.index0 }})">
-                    <button class="set-check" onclick="checkSet({{ loop.index0 }},{{ s }},{{ ex.rest_seconds }})">✓</button>
+                        oninput="onDataInput({{ loop.index0 }}); autoSaveRep({{ loop.index0 }}, {{ s }})">
+                    <button class="set-check" onclick="checkSet({{ loop.index0 }},{{ s }})">✓</button>
                 </div>
                 {% endfor %}
             </div>
 
-            <!-- Effort level -->
-            <div class="effort-section">
-                <div class="effort-label">Nível de esforço</div>
-                <div class="effort-btns">
-                    <button class="effort-btn" id="efEasy{{ loop.index0 }}"
-                        onclick="setEffort({{ loop.index0 }}, 'easy', this)">
-                        <span class="ef-emoji">😊</span>Fácil
-                    </button>
-                    <button class="effort-btn" id="efOk{{ loop.index0 }}"
-                        onclick="setEffort({{ loop.index0 }}, 'ok', this)">
-                        <span class="ef-emoji">😐</span>Ok
-                    </button>
-                    <button class="effort-btn" id="efHard{{ loop.index0 }}"
-                        onclick="setEffort({{ loop.index0 }}, 'hard', this)">
-                        <span class="ef-emoji">😤</span>Pesado
-                    </button>
-                </div>
-            </div>
-
-            <!-- Suggest weight banner (shown when effort=easy) -->
-            <div class="suggest-banner" id="suggestBanner{{ loop.index0 }}">
-                <div class="suggest-text" id="suggestText{{ loop.index0 }}"></div>
-                <div class="suggest-actions">
-                    <button class="suggest-yes" onclick="acceptSuggest({{ loop.index0 }}, {{ ex.pe_id or 'null' }})">
-                        ✓ Sim, aumentar
-                    </button>
-                    <button class="suggest-no" onclick="dismissSuggest({{ loop.index0 }})">
-                        Não agora
-                    </button>
-                </div>
-            </div>
-
-            <!-- History -->
+            <!-- History table -->
             {% if ex.history %}
             <div class="hist-section">
-                <div style="font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Histórico de carga</div>
-                {% set max_w = namespace(val=0.1) %}
-                {% for h in ex.history %}{% if h.weight_kg and h.weight_kg > max_w.val %}{% set max_w.val = h.weight_kg %}{% endif %}{% endfor %}
-                <div class="hist-bars">
-                    {% for h in ex.history %}
-                    <div class="hist-bar-col">
-                        <div class="hist-bar" style="height:{{ ((h.weight_kg or 0)/max_w.val*48)|int }}px;"></div>
-                        <div class="hist-val">{{ h.weight_kg or '—' }}</div>
-                        <div class="hist-date">{{ h.date.strftime('%d/%m') }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div style="font-size:0.74rem; color:var(--text2); margin-top:4px;">
-                    Última: <strong style="color:var(--text);">{{ ex.history[-1].weight_kg or '—' }}kg × {{ ex.history[-1].reps_done or '—' }} reps</strong>
-                </div>
+                <div style="font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1px;">Histórico</div>
+                <table class="hist-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;">Data</th>
+                            <th>Séries</th>
+                            <th>Carga</th>
+                            <th>Reps</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in ex.history | reverse %}
+                        <tr>
+                            <td class="date-col">{{ h.session.date.strftime('%d/%m/%y') }}</td>
+                            <td>{{ h.sets_done or '—' }}</td>
+                            <td class="weight-col">{{ h.weight_kg or '—' }}{% if h.weight_kg %}kg{% endif %}</td>
+                            <td class="reps-col">{{ h.reps_done or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align:center; padding:16px; color:var(--text3); font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; background:var(--bg3); border:1px solid var(--border); border-radius:12px; margin-bottom:12px;">
+                Primeiro registro deste exercício
             </div>
             {% endif %}
 
-            <!-- OK button: save in real-time then return to overview -->
-            <button onclick="saveAndReturn({{ loop.index0 }})" class="btn btn-block"
-                style="background:rgba(48,209,88,0.12); border:1.5px solid rgba(48,209,88,0.3); color:var(--success); border-radius:12px; padding:15px; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px; cursor:pointer; margin-bottom:12px;">
+            <!-- OK button -->
+            <button class="ok-btn" onclick="saveAndReturn({{ loop.index0 }})">
                 ✓ OK — RETORNAR AOS EXERCÍCIOS
             </button>
 
@@ -292,32 +238,23 @@
         </div>
     </div>
 </div>
-
-<!-- Rest overlay -->
-<div class="rest-overlay" id="restOverlay">
-    <div class="rest-ring">
-        <div class="rest-num" id="restNum">60</div>
-        <div class="rest-lbl">Descanso</div>
-    </div>
-    <p style="color:var(--text2); font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.6px;">Prepare-se</p>
-    <button onclick="skipRest()" class="btn btn-ghost btn-sm">Pular</button>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const exerciseIds = {{ exercise_ids_json|safe }};
-const peIds = {{ pe_ids_json|safe }};
-const planId = {{ plan_id_int or 'null' }};
-let current = 0, t0 = Date.now(), restInt = null;
-// effort: ei -> 'easy'|'ok'|'hard'|null
-const efforts = {};
+const sessionId   = '{{ session_id }}';
 
-// Timer
-setInterval(() => {
-    const s = Math.floor((Date.now()-t0)/1000);
-    document.getElementById('timer').textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-}, 1000);
+// ── Clock (current time) ──────────────────────────────────────────────────────
+function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('clock').textContent = h+':'+m+':'+s;
+}
+updateClock();
+setInterval(updateClock, 1000);
 
 // ── Screen switching ──────────────────────────────────────────────────────────
 function showOverview() {
@@ -328,16 +265,14 @@ function showOverview() {
 function openExercise(idx) {
     document.getElementById('overviewScreen').style.display = 'none';
     document.getElementById('detailScreen').style.display = 'block';
-    // Update dots
     document.querySelectorAll('.ex-dot').forEach(d => d.classList.remove('active'));
     document.querySelectorAll('.ex-card').forEach(c => c.classList.remove('active'));
     document.getElementById('dot'+idx).classList.add('active');
     document.getElementById('ex'+idx).classList.add('active');
     document.getElementById('dot'+idx).scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
-    current = idx;
 }
 
-// ── Data detection — ONLY marks red when weight+reps filled ──────────────────
+// ── Data detection → red dot + grid card ─────────────────────────────────────
 function onDataInput(ei) {
     const rowCount = document.querySelectorAll('[id^="sr'+ei+'_"]').length;
     let hasData = false;
@@ -351,103 +286,47 @@ function onDataInput(ei) {
     if (gc) gc.classList.toggle('has-data', hasData);
 }
 
+// ── Auto-save reps as user types ──────────────────────────────────────────────
+let repsSaveTimer = {};
+function autoSaveRep(ei, si) {
+    const key = ei+'_'+si;
+    clearTimeout(repsSaveTimer[key]);
+    repsSaveTimer[key] = setTimeout(() => {
+        const w = document.getElementById('w'+ei+'_'+si)?.value || '';
+        const r = document.getElementById('r'+ei+'_'+si)?.value || '';
+        if (r && sessionId && exerciseIds[ei]) {
+            // Save immediately when reps are typed
+            _saveExercise(ei);
+        }
+    }, 800);
+}
+
 // ── Set check ✓ ───────────────────────────────────────────────────────────────
-function checkSet(ei, si, rest) {
+function checkSet(ei, si) {
     const btn = document.querySelector('#sr'+ei+'_'+si+' .set-check');
     const row = document.getElementById('sr'+ei+'_'+si);
     const done = btn.classList.toggle('done');
     row.classList.toggle('done-row', done);
     onDataInput(ei);
-    if (done && rest > 0) startRest(rest);
 }
 
-// ── Effort buttons ────────────────────────────────────────────────────────────
-function setEffort(ei, level, btn) {
-    // Clear all effort buttons for this exercise
-    ['Easy','Ok','Hard'].forEach(l => {
-        const b = document.getElementById('ef'+l+ei);
-        if (b) b.className = 'effort-btn';
-    });
-    const clsMap = {easy: 'sel-easy', ok: 'sel-ok', hard: 'sel-hard'};
-    btn.classList.add(clsMap[level]);
-    efforts[ei] = level;
-
-    // If EASY → suggest +10% increase
-    const banner = document.getElementById('suggestBanner'+ei);
-    if (level === 'easy') {
-        // Get current weight from first filled input
-        const rowCount = document.querySelectorAll('[id^="sr'+ei+'_"]').length;
-        let curWeight = 0;
-        for (let si = 0; si < rowCount; si++) {
-            const v = parseFloat(document.getElementById('w'+ei+'_'+si)?.value);
-            if (!isNaN(v) && v > 0) { curWeight = v; break; }
-        }
-        if (curWeight > 0) {
-            const newW = (Math.round(curWeight * 1.1 * 2) / 2).toFixed(1);
-            document.getElementById('suggestText'+ei).textContent =
-                `💡 Você achou fácil! Que tal aumentar a carga de ${curWeight}kg para ${newW}kg (+10%) no próximo treino?`;
-            banner.dataset.newWeight = newW;
-            banner.classList.add('show');
-        }
-    } else {
-        banner.classList.remove('show');
-    }
-}
-
-function acceptSuggest(ei, peId) {
-    const banner = document.getElementById('suggestBanner'+ei);
-    const newWeight = parseFloat(banner.dataset.newWeight);
-    if (!peId || !newWeight) { banner.classList.remove('show'); return; }
-
-    fetch(`/plans/${planId}/exercises/${peId}/suggest-weight`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({weight: newWeight})
-    }).then(r => r.json()).then(data => {
-        if (data.ok) {
-            banner.innerHTML = '<div style="color:#30D158; font-weight:700; font-size:0.82rem;">✓ Carga de ' + newWeight + 'kg salva como padrão para o próximo treino!</div>';
-            setTimeout(() => banner.classList.remove('show'), 3000);
-        }
-    }).catch(() => banner.classList.remove('show'));
-}
-
-function dismissSuggest(ei) {
-    document.getElementById('suggestBanner'+ei).classList.remove('show');
-}
-
-// ── Rest timer ────────────────────────────────────────────────────────────────
-function startRest(sec) {
-    let r = sec;
-    document.getElementById('restNum').textContent = r;
-    document.getElementById('restOverlay').classList.add('active');
-    if (restInt) clearInterval(restInt);
-    restInt = setInterval(() => {
-        r--; document.getElementById('restNum').textContent = r;
-        if (r <= 0) skipRest();
-    }, 1000);
-}
-function skipRest() { clearInterval(restInt); document.getElementById('restOverlay').classList.remove('active'); }
-
-// ── Real-time save on OK ─────────────────────────────────────────────────────
-async function saveAndReturn(ei) {
-    const sessionId = document.querySelector('[name="session_id"]').value;
+// ── Real-time save ────────────────────────────────────────────────────────────
+async function _saveExercise(ei) {
     const exId = exerciseIds[ei];
-    if (!sessionId || !exId) { showOverview(); return; }
+    if (!sessionId || !exId) return;
 
-    // Collect valid sets (weight + reps filled)
     const rowCount = document.querySelectorAll('[id^="sr'+ei+'_"]').length;
     let validSets = 0, lastWeight = null, lastReps = '';
     for (let si = 0; si < rowCount; si++) {
         const w = (document.getElementById('w'+ei+'_'+si)?.value || '').trim();
         const r = (document.getElementById('r'+ei+'_'+si)?.value || '').trim();
-        if (w && r && !isNaN(parseFloat(w))) {
+        if (r) {  // Save even without weight if reps are filled
             validSets++;
-            lastWeight = parseFloat(w);
             lastReps = r;
+            if (w && !isNaN(parseFloat(w))) lastWeight = parseFloat(w);
         }
     }
-
-    if (validSets === 0) { showOverview(); return; }
+    if (validSets === 0) return;
 
     try {
         await fetch('/live/save-exercise', {
@@ -459,13 +338,14 @@ async function saveAndReturn(ei) {
                 sets_done: validSets,
                 reps_done: lastReps,
                 weight_kg: lastWeight,
-                effort: efforts[ei] || null
+                effort: null
             })
         });
-    } catch(e) {
-        console.error('Save error:', e);
-    }
+    } catch(e) { console.error('Save error:', e); }
+}
 
+async function saveAndReturn(ei) {
+    await _saveExercise(ei);
     showOverview();
 }
 
@@ -474,8 +354,8 @@ function openFinish()  { document.getElementById('finishModal').classList.add('a
 function closeFinish() { document.getElementById('finishModal').classList.remove('active'); }
 
 function submitFinish() {
-    const mins = Math.floor((Date.now()-t0)/1000/60);
-    document.getElementById('finalDuration').value = mins;
+    const mins = Math.floor((Date.now() - performance.timing?.navigationStart || 0) / 60000);
+    document.getElementById('finalDuration').value = mins || '';
     document.getElementById('finalName').value = document.getElementById('customName').value;
 
     const gi = document.getElementById('groupInputs');
@@ -498,11 +378,10 @@ function submitFinish() {
                 done:   row.querySelector('.set-check')?.classList.contains('done') || false
             });
         });
-        data.push({ex_idx: ei, sets, effort: efforts[ei] || null});
+        data.push({ex_idx: ei, sets, effort: null});
     });
     document.getElementById('exerciseData').value = JSON.stringify(data);
     document.getElementById('finishForm').submit();
 }
 </script>
 {% endblock %}
- 
