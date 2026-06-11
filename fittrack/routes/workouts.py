@@ -55,8 +55,9 @@ def _save_plans(planos, user_id):
             except: sets = 3
             try: rest = int(ex_data.get('descanso_segundos', 60))
             except: rest = 60
+            reps_val = str(ex_data.get('repeticoes', '10-12'))[:50]
             db.session.add(PlanExercise(plan_id=plan.id, exercise_id=ex.id,
-                sets=sets, reps=str(ex_data.get('repeticoes', '10-12')),
+                sets=sets, reps=reps_val,
                 rest_seconds=rest, order=j))
         created.append(plan.name)
     db.session.commit()
