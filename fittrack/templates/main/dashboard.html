@@ -4,10 +4,8 @@
 {% block topbar %}
 <div class="topbar">
     <div style="flex:1;">
-        <div style="font-size:0.58rem; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:1px;">{{ today.strftime('%A, %d %b').title() }}</div>
-        <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.5px; line-height:1.1;">
-            Olá, {{ current_user.name.split()[0] }} 👋
-        </h1>
+        <div style="font-size:0.56rem; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:1px;">{{ today.strftime('%d de %B').title() }}</div>
+        <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:0.5px;">{{ current_user.name.split()[0] }}</h1>
     </div>
     <a href="{{ url_for('auth.logout') }}" class="topbar-btn">Sair</a>
 </div>
@@ -15,175 +13,162 @@
 
 {% block extra_css %}
 <style>
-/* ── Stats row ── */
-.stats-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
-.stat-box { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
-.stat-num { font-family:'Bebas Neue',sans-serif; font-size:2.4rem; line-height:1; letter-spacing:1px; }
-.stat-lbl { font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px; }
-
-/* ── Section card ── */
 .dash-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; margin-bottom:12px; overflow:hidden; }
-.dash-card-head { padding:14px 16px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-.dash-card-title { font-family:'Bebas Neue',sans-serif; font-size:0.85rem; letter-spacing:1.5px; color:var(--text2); }
-.dash-card-body { padding:14px 16px; }
+.dash-head { padding:13px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.dash-head-title { font-family:'Bebas Neue',sans-serif; font-size:0.82rem; letter-spacing:1.5px; color:var(--text2); }
+.dash-body { padding:14px 16px; }
 
-/* ── Planning / suggestion ── */
-.suggest-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
-.suggest-row:last-child { border-bottom:none; }
-.suggest-icon-box { width:40px; height:40px; border-radius:10px; background:var(--bg4); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
-.suggest-icon-box.top { background:var(--red-glow); border-color:rgba(232,25,44,0.25); }
-.suggest-name { font-weight:700; font-size:0.88rem; flex:1; }
-.suggest-days { font-family:'Bebas Neue',sans-serif; font-size:0.9rem; letter-spacing:0.5px; }
-.suggest-days.fresh { color:var(--success); }
-.suggest-days.warn  { color:var(--yellow); }
-.suggest-days.rest  { color:var(--red); }
-.suggest-days.never { color:var(--text3); }
+/* Stats */
+.stats-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.stat-box { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:13px 15px; }
+.stat-num { font-family:'Bebas Neue',sans-serif; font-size:2.2rem; line-height:1; letter-spacing:1px; }
+.stat-lbl { font-size:0.58rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px; }
 
-/* ── Action tabs ── */
-.tab-pills { display:flex; background:var(--bg3); border-radius:50px; padding:3px; margin-bottom:14px; }
-.tab-pill { flex:1; padding:9px; border:none; border-radius:50px; background:transparent; color:var(--text2); font-weight:700; font-size:0.78rem; cursor:pointer; transition:all 0.15s; text-transform:uppercase; letter-spacing:0.4px; }
-.tab-pill.on { background:var(--red); color:white; }
+/* Planejamento */
+.plan-quick-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.plan-quick-row:last-child { border-bottom:none; }
+.plan-quick-name { flex:1; font-weight:700; font-size:0.86rem; }
+.plan-quick-meta { font-size:0.7rem; color:var(--text2); margin-top:2px; }
+.rest-badge { font-size:0.62rem; font-weight:700; padding:3px 7px; border-radius:5px; flex-shrink:0; }
+.rest-fresh { background:rgba(48,209,88,0.1); color:var(--success); }
+.rest-warn  { background:rgba(255,184,0,0.1); color:var(--yellow); }
+.rest-overdue { background:rgba(232,25,44,0.1); color:var(--red); }
+.rest-never { background:var(--bg4); color:var(--text3); }
 
-/* ── Plan list ── */
-.plan-row { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--border); }
-.plan-row:last-child { border-bottom:none; }
-.plan-row-info { flex:1; min-width:0; }
-.plan-row-name { font-weight:700; font-size:0.88rem; }
-.plan-row-meta { font-size:0.7rem; color:var(--text2); margin-top:2px; display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
-.plan-group-dot { font-size:0.8rem; }
-.start-pill { background:var(--red); color:white; border:none; border-radius:8px; padding:8px 14px; font-family:'Bebas Neue',sans-serif; font-size:0.88rem; letter-spacing:0.5px; cursor:pointer; flex-shrink:0; text-decoration:none; display:inline-flex; align-items:center; gap:4px; }
+/* Treino tabs */
+.tab-row { display:flex; background:var(--bg3); border-radius:50px; padding:3px; margin-bottom:14px; }
+.tab-btn { flex:1; padding:8px; border:none; border-radius:50px; background:transparent; color:var(--text2); font-weight:700; font-size:0.75rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.4px; transition:all 0.15s; }
+.tab-btn.on { background:var(--red); color:white; }
 
-/* ── Free group grid ── */
-.group-grid-2 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-.group-tile { background:var(--bg3); border:1.5px solid var(--border); border-radius:11px; padding:12px 6px; text-align:center; cursor:pointer; transition:all 0.15s; }
-.group-tile:active { transform:scale(0.96); }
-.group-tile.sel { border-color:var(--red); background:var(--red-glow); }
-.gt-icon { font-size:1.5rem; display:block; margin-bottom:4px; }
-.gt-name { font-size:0.65rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.4px; }
-.group-tile.sel .gt-name { color:var(--red); }
+/* Plan list */
+.plan-list-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.plan-list-row:last-child { border-bottom:none; }
+.plan-list-info { flex:1; min-width:0; }
+.plan-list-name { font-weight:700; font-size:0.86rem; }
+.plan-list-tags { display:flex; flex-wrap:wrap; gap:3px; margin-top:3px; }
+.plan-tag { background:var(--bg4); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-size:0.6rem; font-weight:600; color:var(--text2); }
+.start-btn { background:var(--red); color:white; border:none; border-radius:7px; padding:8px 13px; font-family:'Bebas Neue',sans-serif; font-size:0.88rem; letter-spacing:0.4px; cursor:pointer; white-space:nowrap; text-decoration:none; }
 
-/* ── History list ── */
-.hist-row { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); text-decoration:none; color:var(--text); transition:opacity 0.15s; }
+/* Group picker */
+.group-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:12px; }
+.group-tile { background:var(--bg3); border:1.5px solid var(--border); border-radius:10px; padding:11px 5px; text-align:center; cursor:pointer; transition:all 0.15s; font-size:0.7rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; }
+.group-tile.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
+
+/* History */
+.hist-row { display:flex; align-items:flex-start; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); text-decoration:none; color:var(--text); }
 .hist-row:last-child { border-bottom:none; }
-.hist-row:active { opacity:0.7; }
-.hist-date { flex-shrink:0; text-align:center; width:36px; }
-.hist-d { font-family:'Bebas Neue',sans-serif; font-size:1.3rem; color:var(--red); line-height:1; }
-.hist-m { font-size:0.56rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.4px; }
+.hist-date { flex-shrink:0; text-align:center; width:34px; }
+.hist-d { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--red); line-height:1; }
+.hist-m { font-size:0.54rem; font-weight:700; color:var(--text2); text-transform:uppercase; }
 .hist-body { flex:1; min-width:0; }
-.hist-name { font-weight:700; font-size:0.86rem; margin-bottom:5px; }
-.hist-tags { display:flex; flex-wrap:wrap; gap:4px; }
-.hist-tag { display:inline-flex; align-items:center; gap:3px; background:var(--bg4); border:1px solid var(--border); border-radius:5px; padding:2px 7px; font-size:0.63rem; font-weight:600; color:var(--text2); }
-.hist-dur { font-size:0.68rem; color:var(--text3); flex-shrink:0; margin-top:2px; }
+.hist-name { font-weight:700; font-size:0.84rem; margin-bottom:4px; }
+.hist-tags { display:flex; flex-wrap:wrap; gap:3px; }
+.hist-tag { background:var(--bg4); border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:0.62rem; font-weight:600; color:var(--text2); }
+.hist-dur { font-size:0.66rem; color:var(--text3); flex-shrink:0; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content">
 
-    <!-- ① Stats -->
+    <!-- Stats -->
     <div class="stats-row">
         <div class="stat-box">
             <div class="stat-num" style="color:var(--red);">{{ weekly_sessions }}</div>
-            <div class="stat-lbl">Treinos esta semana</div>
+            <div class="stat-lbl">Esta semana</div>
         </div>
         <div class="stat-box">
-            <div class="stat-num" style="color:var(--text);">{{ monthly_sessions }}</div>
-            <div class="stat-lbl">Treinos este mês</div>
+            <div class="stat-num">{{ monthly_sessions }}</div>
+            <div class="stat-lbl">Este mês</div>
         </div>
     </div>
 
-    <!-- ② Planejamento (muscle group rest) -->
+    <!-- CARD: Planejamento -->
     <div class="dash-card">
-        <div class="dash-card-head">
-            <span class="dash-card-title">Planejamento</span>
-            {% if top_suggestion %}
-            <span style="font-size:0.68rem; color:var(--red); font-weight:700;">
-                💡 {{ top_suggestion.group.name }} mais descansado
-            </span>
+        <div class="dash-head">
+            <span class="dash-head-title">Planejamento</span>
+            <a href="{{ url_for('workouts.new') }}" class="topbar-btn">+ Criar plano</a>
+        </div>
+        <div class="dash-body" style="padding:8px 16px;">
+            {% if group_suggestions %}
+                {% for item in group_suggestions %}
+                {% set days = item.days_ago %}
+                {% set cls = 'rest-never' if days is none else ('rest-fresh' if days <= 2 else ('rest-warn' if days <= 4 else 'rest-overdue')) %}
+                <div class="plan-quick-row">
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:0.84rem;">{{ item.group.name }}</div>
+                    </div>
+                    <span class="rest-badge {{ cls }}">
+                        {% if days is none %}Nunca
+                        {% elif days == 0 %}Hoje
+                        {% elif days == 1 %}1 dia
+                        {% else %}{{ days }} dias{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="padding:16px 0; text-align:center; color:var(--text3); font-size:0.82rem;">Nenhum treino registrado ainda</div>
             {% endif %}
         </div>
-        <div class="dash-card-body" style="padding:8px 16px;">
-            {% for item in group_suggestions %}
-            {% set days = item.days_ago %}
-            {% set cls = 'never' if days is none else ('fresh' if days <= 2 else ('warn' if days <= 4 else 'rest')) %}
-            <div class="suggest-row">
-                <div class="suggest-icon-box {% if loop.first %}top{% endif %}">{{ item.group.icon }}</div>
-                <div class="suggest-name">{{ item.group.name }}</div>
-                <div class="suggest-days {{ cls }}">
-                    {% if days is none %}NUNCA
-                    {% elif days == 0 %}HOJE
-                    {% elif days == 1 %}1D
-                    {% else %}{{ days }}D{% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
     </div>
 
-    <!-- ③ Ações -->
+    <!-- CARD: Treinar -->
     <div class="dash-card">
-        <div class="dash-card-head">
-            <span class="dash-card-title">Treinar agora</span>
+        <div class="dash-head">
+            <span class="dash-head-title">Treinar</span>
         </div>
-        <div class="dash-card-body">
-            <!-- Tabs -->
-            <div class="tab-pills">
-                <button class="tab-pill on" id="tabPlan" onclick="showTab('plan')">📋 Planejado</button>
-                <button class="tab-pill" id="tabFree" onclick="showTab('free')">⚡ Avulso</button>
+        <div class="dash-body">
+            <div class="tab-row">
+                <button class="tab-btn on" id="tabPlan" onclick="showTab('plan')">Planejado</button>
+                <button class="tab-btn" id="tabFree" onclick="showTab('free')">Avulso</button>
             </div>
 
-            <!-- Planned tab -->
+            <!-- Planejado -->
             <div id="viewPlan">
                 {% if all_plans %}
                     {% for plan in all_plans %}
-                    <div class="plan-row">
-                        <div class="plan-row-info">
-                            <div class="plan-row-name">{{ plan.name }}</div>
-                            <div class="plan-row-meta">
-                                <span>{{ plan.plan_exercises|length }} exerc.</span>
+                    <div class="plan-list-row">
+                        <div class="plan-list-info">
+                            <div class="plan-list-name">{{ plan.name }}</div>
+                            <div class="plan-list-tags">
                                 {% for g in plan.muscle_groups %}
-                                <span style="background:var(--bg4); border:1px solid var(--border); border-radius:5px; padding:1px 6px; font-size:0.62rem; font-weight:700; color:var(--text2);">{{ g.name }}</span>
+                                <span class="plan-tag">{{ g.name }}</span>
                                 {% endfor %}
+                                <span class="plan-tag">{{ plan.plan_exercises|length }} exerc.</span>
                             </div>
                         </div>
-                        <a href="/live/{{ plan.id }}" class="start-pill">▶ INICIAR</a>
+                        <a href="/live/{{ plan.id }}" class="start-btn">Iniciar</a>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <div style="text-align:center; padding:20px 0; color:var(--text2);">
-                        <div style="font-size:1.8rem; margin-bottom:8px; opacity:0.4;">📋</div>
-                        <div style="font-size:0.82rem; font-weight:600; margin-bottom:12px;">Nenhum plano criado</div>
+                    <div style="text-align:center; padding:18px 0; color:var(--text2);">
+                        <div style="font-size:0.82rem; margin-bottom:10px;">Nenhum plano criado</div>
                         <a href="{{ url_for('workouts.index') }}" class="btn btn-red btn-sm">Criar plano</a>
                     </div>
                 {% endif %}
             </div>
 
-            <!-- Free tab -->
+            <!-- Avulso -->
             <div id="viewFree" style="display:none;">
-                <div style="font-size:0.65rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px;">
-                    Selecione os grupos
-                </div>
-                <div class="group-grid-2" id="groupGrid">
+                <div style="font-size:0.62rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px;">Selecione os grupos</div>
+                <div class="group-grid">
                     {% for item in group_suggestions %}
-                    <div class="group-tile" data-id="{{ item.group.id }}" onclick="toggleGroup(this)">
-                        <span class="gt-icon">{{ item.group.icon }}</span>
-                        <span class="gt-name">{{ item.group.name }}</span>
-                    </div>
+                    <div class="group-tile" data-id="{{ item.group.id }}" onclick="toggleGroup(this)">{{ item.group.name }}</div>
                     {% endfor %}
                 </div>
                 <button onclick="startFree()" id="btnFree" disabled
                     class="btn btn-red btn-block"
-                    style="margin-top:12px; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.5px;">
-                    ▶ INICIAR TREINO AVULSO
+                    style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+                    Iniciar Treino Avulso
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ④ Histórico -->
+    <!-- CARD: Histórico -->
     <div class="dash-card">
-        <div class="dash-card-head">
-            <span class="dash-card-title">Últimos treinos</span>
+        <div class="dash-head">
+            <span class="dash-head-title">Histórico</span>
             <a href="{{ url_for('history.index') }}" class="section-link" style="font-size:0.72rem;">Ver todos</a>
         </div>
         <div style="padding:0 16px;">
@@ -199,23 +184,16 @@
                         <div class="hist-name">{{ s.display_name }}</div>
                         <div class="hist-tags">
                             {% for g in item.groups %}
-                            <span class="hist-tag">{{ g.icon }} {{ g.name }}</span>
+                            <span class="hist-tag">{{ g.name }}</span>
                             {% endfor %}
-                            {% if not item.groups %}
-                            <span class="hist-tag" style="color:var(--text3);">Sem grupos</span>
-                            {% endif %}
+                            {% if not item.groups %}<span class="hist-tag" style="color:var(--text3);">Sem grupos</span>{% endif %}
                         </div>
                     </div>
-                    {% if s.duration_minutes %}
-                    <div class="hist-dur">{{ s.duration_minutes }}min</div>
-                    {% endif %}
+                    {% if s.duration_minutes %}<div class="hist-dur">{{ s.duration_minutes }}min</div>{% endif %}
                 </a>
                 {% endfor %}
             {% else %}
-                <div style="text-align:center; padding:28px 0; color:var(--text2);">
-                    <div style="font-size:1.8rem; margin-bottom:8px; opacity:0.3;">📅</div>
-                    <div style="font-size:0.82rem; font-weight:600;">Nenhum treino registrado</div>
-                </div>
+                <div style="text-align:center; padding:24px 0; color:var(--text2); font-size:0.82rem;">Nenhum treino registrado</div>
             {% endif %}
         </div>
     </div>
@@ -225,15 +203,12 @@
 
 {% block extra_js %}
 <script>
-// Tabs
 function showTab(tab) {
     document.getElementById('viewPlan').style.display = tab === 'plan' ? 'block' : 'none';
     document.getElementById('viewFree').style.display = tab === 'free' ? 'block' : 'none';
     document.getElementById('tabPlan').classList.toggle('on', tab === 'plan');
     document.getElementById('tabFree').classList.toggle('on', tab === 'free');
 }
-
-// Group toggle for free workout
 let selGroups = [];
 function toggleGroup(el) {
     const id = parseInt(el.dataset.id);
