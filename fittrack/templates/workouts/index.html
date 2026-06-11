@@ -149,7 +149,7 @@
                             <div style="font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px; text-align:left;">Observações / instruções</div>
                             <textarea name="notes" class="form-control" rows="2"
                                 style="font-size:0.82rem; resize:none;"
-                                placeholder="Ex: Manter cotovelo fixo, descer controlado...">{{ pe.exercise.notes or '' }}</textarea>
+                                placeholder="Ex: Manter cotovelo fixo, descer controlado...">{{ pe.notes or '' }}</textarea>
                         </div>
                         <div style="display:flex; gap:8px;">
                             <button type="button" onclick="toggleExEdit({{ pe.id }},null)" class="btn btn-ghost btn-sm" style="flex:1;">Cancelar</button>
