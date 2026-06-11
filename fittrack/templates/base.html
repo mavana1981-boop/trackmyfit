@@ -180,9 +180,6 @@
         <a href="{{ url_for('history.index') }}" class="nav-item {% if request.blueprint == 'history' and request.endpoint not in ['history.start','history.live','history.save_live'] %}active{% endif %}">
             <span class="nav-icon">📅</span>Histórico
         </a>
-        <a href="{{ url_for('exercises.index') }}" class="nav-item {% if request.blueprint == 'exercises' %}active{% endif %}">
-            <span class="nav-icon">🏋️</span>Exerc.
-        </a>
     </nav>
     {% endif %}
 
