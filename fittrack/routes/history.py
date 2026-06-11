@@ -215,6 +215,7 @@ def save_exercise_realtime():
     reps_done   = data.get('reps_done', '')
     weight_kg   = data.get('weight_kg')
     effort      = data.get('effort')
+    notes       = data.get('notes', '')
 
     if not session_id or not exercise_id:
         return jsonify({'ok': False, 'error': 'Missing fields'}), 400
@@ -234,7 +235,8 @@ def save_exercise_realtime():
         sets_done=int(sets_done),
         reps_done=str(reps_done),
         weight_kg=float(weight_kg) if weight_kg else None,
-        effort_level=effort
+        effort_level=effort,
+        notes=notes or None
     )
     db.session.add(se)
     db.session.commit()
