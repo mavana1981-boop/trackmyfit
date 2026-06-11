@@ -141,6 +141,7 @@ def live(plan_id):
                 .first()
             )
             e.coach_notes = pe_with_notes.notes if pe_with_notes else ''
+            e.series_data = None
             e.history = _exercise_history(current_user.id, ex.id)
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
@@ -173,6 +174,7 @@ def live(plan_id):
             e.pe_id = pe.id
             e.weight = pe.suggested_weight if pe.suggested_weight else (last.weight_kg if last else None)
             e.coach_notes = pe.notes or ''
+            e.series_data = pe.series_data or None
             e.history = _exercise_history(current_user.id, pe.exercise_id)
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
