@@ -53,7 +53,7 @@
         .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:var(--bg2); border-top:1px solid var(--border); display:flex; z-index:100; }
         .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 0 13px; text-decoration:none; color:var(--text3); font-size:0.58rem; font-weight:700; font-family:'Inter',sans-serif; gap:4px; transition:color 0.15s; letter-spacing:0.8px; text-transform:uppercase; }
         .nav-item.active { color:var(--red); }
-        .nav-icon { font-size:1.25rem; }
+        .nav-icon { font-size:1.25rem; display:block; text-align:center; }
 
         /* ── Content ── */
         .content { padding:18px 16px; max-width:480px; margin:0 auto; }
@@ -175,7 +175,7 @@
             <span class="nav-icon">📋</span>Planos
         </a>
         <a href="{{ url_for('history.start') }}" class="nav-item {% if request.endpoint in ['history.start','history.live'] %}active{% endif %}">
-            <span class="nav-icon" style="color:var(--red); font-size:1.5rem;">▶</span>Treinar
+            <span class="nav-icon">▶</span>Treinar
         </a>
         <a href="{{ url_for('history.index') }}" class="nav-item {% if request.blueprint == 'history' and request.endpoint not in ['history.start','history.live','history.save_live'] %}active{% endif %}">
             <span class="nav-icon">📅</span>Histórico
