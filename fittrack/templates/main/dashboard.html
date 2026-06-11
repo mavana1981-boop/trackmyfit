@@ -87,7 +87,10 @@
     <div class="dash-card">
         <div class="dash-head">
             <span class="dash-head-title">Planejamento</span>
-            <a href="{{ url_for('workouts.new') }}" class="topbar-btn">+ Criar plano</a>
+            <div style="display:flex; gap:6px;">
+                <a href="{{ url_for('workouts.import_pdf') }}" class="topbar-btn">📄 PDF</a>
+                <a href="{{ url_for('workouts.new') }}" class="topbar-btn">+ Criar</a>
+            </div>
         </div>
         <div class="dash-body" style="padding:8px 16px;">
             {% if group_suggestions %}
