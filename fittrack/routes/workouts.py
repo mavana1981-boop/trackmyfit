@@ -102,7 +102,14 @@ def _call_gemini(pdf_bytes):
     if not api_key: raise ValueError('GEMINI_API_KEY não configurada.')
     payload = {"contents": [{"parts": [
         {"inline_data": {"mime_type": "application/pdf", "data": base64.b64encode(pdf_bytes).decode()}},
-        {"text": PROMPT}
+        {"text": PROMPT + """
+
+ATENÇÃO: Leia o PDF com cuidado. Preserve EXATAMENTE:
+- Nomes dos exercícios como escritos
+- Número de séries e repetições (ex: 3x12, 4x8-10, 2x falha)
+- Ordem dos exercícios em cada treino
+- Nome de cada treino (Treino A, B, C, etc.)
+Não invente nem altere nada."""}
     ]}], "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192}}
     r = http_requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}", json=payload, timeout=60)
     r.raise_for_status()
@@ -144,7 +151,7 @@ def _call_cloudflare(pdf_bytes):
 
 def _analyze_pdf(pdf_bytes):
     errors = []
-    for name, fn in [('Cloudflare', _call_cloudflare), ('Groq', _call_groq), ('Gemini', _call_gemini)]:
+    for name, fn in [('Gemini', _call_gemini), ('Groq', _call_groq), ('Cloudflare', _call_cloudflare)]:
         try:
             planos = fn(pdf_bytes)
             if planos: return planos, name
