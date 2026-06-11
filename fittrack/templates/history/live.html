@@ -152,7 +152,7 @@
                     <input class="set-reps" type="text"
                         id="r{{ loop.index0 }}_{{ s }}"
                         value="{{ ex.reps }}" placeholder="—"
-                        oninput="onDataInput({{ loop.index0 }}); autoSaveRep({{ loop.index0 }}, {{ s }})">
+                        oninput="onDataInput({{ loop.index0 }})">
                     <button class="set-check" onclick="checkSet({{ loop.index0 }},{{ s }})">✓</button>
                 </div>
                 {% endfor %}
@@ -256,6 +256,13 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
+// ── Track which fields user actually changed ─────────────────────────────────
+document.querySelectorAll('.set-input, .set-reps').forEach(el => {
+    el.addEventListener('input', function() {
+        this.dataset.changed = '1';
+    });
+});
+
 // ── Screen switching ──────────────────────────────────────────────────────────
 function showOverview() {
     document.getElementById('overviewScreen').style.display = 'block';
@@ -277,39 +284,14 @@ function openExercise(idx) {
 const userTouched = new Set();
 
 function onDataInput(ei) {
-    // Mark as touched only when user actually types
-    userTouched.add(ei);
-    _updateDot(ei);
+    // Visual feedback only — red dot only confirmed after server save
 }
 
 function _updateDot(ei) {
-    // Only mark red if user actually touched this exercise
-    if (!userTouched.has(ei)) return;
-    const rowCount = document.querySelectorAll('[id^="sr'+ei+'_"]').length;
-    let hasData = false;
-    for (let si = 0; si < rowCount; si++) {
-        const w = (document.getElementById('w'+ei+'_'+si)?.value || '').trim();
-        const r = (document.getElementById('r'+ei+'_'+si)?.value || '').trim();
-        if (w !== '' && r !== '' && !isNaN(parseFloat(w))) { hasData = true; break; }
-    }
-    document.getElementById('dot'+ei).classList.toggle('has-data', hasData);
-    const gc = document.getElementById('gc'+ei);
-    if (gc) gc.classList.toggle('has-data', hasData);
+    // Only mark red after server confirms save (called from saveAndReturn)
 }
 
-// ── Auto-save reps as user types ──────────────────────────────────────────────
-let repsSaveTimer = {};
-function autoSaveRep(ei, si) {
-    userTouched.add(ei);
-    const key = ei+'_'+si;
-    clearTimeout(repsSaveTimer[key]);
-    repsSaveTimer[key] = setTimeout(() => {
-        const r = document.getElementById('r'+ei+'_'+si)?.value || '';
-        if (r && sessionId && exerciseIds[ei]) {
-            _saveExercise(ei);
-        }
-    }, 800);
-}
+// Auto-save removed — save happens only on OK click
 
 // ── Set check ✓ ───────────────────────────────────────────────────────────────
 function checkSet(ei, si) {
@@ -323,23 +305,30 @@ function checkSet(ei, si) {
 // ── Real-time save ────────────────────────────────────────────────────────────
 async function _saveExercise(ei) {
     const exId = exerciseIds[ei];
-    if (!sessionId || !exId) return;
+    if (!sessionId || !exId) return false;
 
+    // Only save sets where user actually changed the reps value
+    // (reps field that still shows the default plan value doesn't count)
     const rowCount = document.querySelectorAll('[id^="sr'+ei+'_"]').length;
     let validSets = 0, lastWeight = null, lastReps = '';
     for (let si = 0; si < rowCount; si++) {
-        const w = (document.getElementById('w'+ei+'_'+si)?.value || '').trim();
-        const r = (document.getElementById('r'+ei+'_'+si)?.value || '').trim();
-        if (r) {  // Save even without weight if reps are filled
+        const wEl = document.getElementById('w'+ei+'_'+si);
+        const rEl = document.getElementById('r'+ei+'_'+si);
+        const w = (wEl?.value || '').trim();
+        const r = (rEl?.value || '').trim();
+        // Only count if reps was CHANGED by user (dataset.original set on focus)
+        const rChanged = rEl?.dataset.changed === '1';
+        const wChanged = wEl?.dataset.changed === '1';
+        if (r && (rChanged || wChanged)) {
             validSets++;
             lastReps = r;
             if (w && !isNaN(parseFloat(w))) lastWeight = parseFloat(w);
         }
     }
-    if (validSets === 0) return;
+    if (validSets === 0) return false;
 
     try {
-        await fetch('/live/save-exercise', {
+        const resp = await fetch('/live/save-exercise', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -351,14 +340,19 @@ async function _saveExercise(ei) {
                 effort: null
             })
         });
-    } catch(e) { console.error('Save error:', e); }
+        const data = await resp.json();
+        return data.ok === true;
+    } catch(e) { console.error('Save error:', e); return false; }
 }
 
 async function saveAndReturn(ei) {
-    userTouched.add(ei);
-    await _saveExercise(ei);
-    // Update grid card red after saving
-    _updateDot(ei);
+    const saved = await _saveExercise(ei);
+    // Only mark red if something was actually saved to server
+    if (saved) {
+        document.getElementById('dot'+ei).classList.add('has-data');
+        const gc = document.getElementById('gc'+ei);
+        if (gc) gc.classList.add('has-data');
+    }
     showOverview();
 }
 
