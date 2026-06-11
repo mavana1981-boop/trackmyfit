@@ -3,8 +3,7 @@
 
 {% block topbar %}
 <div class="topbar">
-    <a href="{{ url_for('history.start') }}" class="topbar-back"
-       onclick="return confirm('Sair? O treino já foi iniciado.')">✕</a>
+    <a href="#" class="topbar-back" onclick="exitWorkout()">✕</a>
     <div style="flex:1; text-align:center;">
         <div style="font-size:0.58rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Ao vivo</div>
         <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px;">{{ plan_name }}</h1>
@@ -130,6 +129,12 @@
                     <span class="badge badge-muted">{{ ex.reps }} REPS</span>
                     {% if ex.weight %}<span class="badge badge-red">{{ ex.weight }}kg</span>{% endif %}
                 </div>
+                {% if ex.coach_notes %}
+                <div style="margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.05); border-radius:8px; border-left:2px solid var(--red); position:relative; z-index:1;">
+                    <div style="font-size:0.58rem; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">Instruções</div>
+                    <div style="font-size:0.82rem; color:var(--text2); line-height:1.5;">{{ ex.coach_notes }}</div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Sets table -->
@@ -189,13 +194,6 @@
             </div>
             {% endif %}
 
-            <!-- Notes field -->
-            <div style="margin-bottom:12px;">
-                <textarea id="notes{{ loop.index0 }}" class="form-control"
-                    rows="2" placeholder="Observações sobre este exercício (opcional)..."
-                    style="font-size:0.85rem; resize:none;"></textarea>
-            </div>
-
             <!-- OK button -->
             <button class="ok-btn" onclick="saveAndReturn({{ loop.index0 }})">
                 ✓ OK — RETORNAR AOS EXERCÍCIOS
@@ -251,6 +249,21 @@
 <script>
 const exerciseIds = {{ exercise_ids_json|safe }};
 const sessionId   = '{{ session_id }}';
+
+// ── Exit: cancel empty session ───────────────────────────────────────────────
+async function exitWorkout() {
+    const hasAny = document.querySelectorAll('.ex-dot.has-data').length > 0;
+    const msg = hasAny
+        ? 'Sair? Os exercícios marcados já foram salvos.'
+        : 'Sair? Nenhum exercício foi registrado — o treino será cancelado.';
+    if (!confirm(msg)) return;
+    if (!hasAny && sessionId) {
+        try {
+            await fetch('/live/cancel/' + sessionId, {method:'POST'});
+        } catch(e) {}
+    }
+    window.location.href = '{{ url_for("history.start") }}';
+}
 
 // ── Clock (current time) ──────────────────────────────────────────────────────
 function updateClock() {
@@ -345,7 +358,6 @@ async function _saveExercise(ei) {
                 reps_done: lastReps,
                 weight_kg: lastWeight,
                 effort: null,
-                notes: (document.getElementById('notes'+ei)?.value || '').trim()
             })
         });
         const data = await resp.json();
