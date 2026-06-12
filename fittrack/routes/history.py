@@ -112,7 +112,13 @@ def live(plan_id):
             flash('Selecione pelo menos um grupo muscular.', 'error')
             return redirect(url_for('history.start'))
         selected_group_ids = group_ids
-        raw = Exercise.query.filter(Exercise.muscle_group_id.in_(group_ids)).all()
+        # Filter by specific exercise IDs if provided
+        exids_str = request.args.get('exids', '')
+        exids = [int(x) for x in exids_str.split(',') if x.isdigit()]
+        if exids:
+            raw = Exercise.query.filter(Exercise.id.in_(exids)).all()
+        else:
+            raw = Exercise.query.filter(Exercise.muscle_group_id.in_(group_ids)).all()
         for ex in raw:
             e = ExData()
             e.id = ex.id
