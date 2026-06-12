@@ -212,6 +212,15 @@ def live(plan_id):
 
 # ── Real-time exercise save ───────────────────────────────────────────────────
 
+@history_bp.route('/live/exercises-by-group/<int:group_id>')
+@login_required
+def exercises_by_group_live(group_id):
+    """Return exercises for a group as JSON for the live add-exercise feature."""
+    import json as _json
+    exercises = Exercise.query.filter_by(muscle_group_id=group_id).order_by(Exercise.name).all()
+    return jsonify([{'id': e.id, 'name': e.name} for e in exercises])
+
+
 @history_bp.route('/live/save-exercise', methods=['POST'])
 @login_required
 def save_exercise_realtime():
@@ -400,4 +409,3 @@ def record():
 
     today = _today_brazil().strftime('%Y-%m-%d')
     return render_template('history/record.html', plans=plans, groups=groups, today=today)
- 
