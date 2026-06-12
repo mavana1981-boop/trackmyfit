@@ -168,13 +168,13 @@
 
     {% if current_user.is_authenticated %}
     <nav class="bottom-nav">
-        <a href="{{ url_for('main.dashboard') }}" class="nav-item {% if request.blueprint == 'main' %}active{% endif %}">
+        <a href="/" class="nav-item {% if request.blueprint == 'main' %}active{% endif %}">
             <span class="nav-icon">⚡</span>Home
         </a>
-        <a href="{{ url_for('history.start') }}" class="nav-item {% if request.endpoint in ['history.start','history.live'] %}active{% endif %}">
+        <a href="/start" class="nav-item {% if request.endpoint in ['history.start','history.live'] %}active{% endif %}">
             <span class="nav-icon">▶</span>Treinar
         </a>
-        <a href="{{ url_for('history.index') }}" class="nav-item {% if request.blueprint == 'history' and request.endpoint not in ['history.start','history.live','history.save_live','history.cancel_live'] %}active{% endif %}">
+        <a href="/history" class="nav-item {% if request.blueprint == 'history' and request.endpoint not in ['history.start','history.live','history.save_live','history.cancel_live'] %}active{% endif %}">
             <span class="nav-icon">📅</span>Histórico
         </a>
     </nav>
