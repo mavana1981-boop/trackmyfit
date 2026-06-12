@@ -22,6 +22,7 @@ MIGRATIONS = [
     "ALTER TABLE plan_exercises ADD COLUMN IF NOT EXISTS suggested_weight FLOAT",
     "ALTER TABLE plan_exercises ALTER COLUMN reps TYPE VARCHAR(100)",
     "ALTER TABLE plan_exercises ADD COLUMN IF NOT EXISTS notes TEXT",
+    "ALTER TABLE plan_exercises ADD COLUMN IF NOT EXISTS series_data TEXT",
     "ALTER TABLE exercises ALTER COLUMN name TYPE TEXT",
     "ALTER TABLE session_exercises ADD COLUMN IF NOT EXISTS effort_level VARCHAR(10)",
     """CREATE TABLE IF NOT EXISTS plan_muscle_groups (
@@ -86,6 +87,12 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Faça login para continuar.'
     login_manager.login_message_category = 'info'
+
+    import json as _json
+    @app.template_filter('fromjson')
+    def fromjson_filter(s):
+        try: return _json.loads(s)
+        except: return []
 
     from routes.auth import auth_bp
     from routes.main import main_bp

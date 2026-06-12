@@ -64,6 +64,7 @@ class PlanExercise(db.Model):
     order = db.Column(db.Integer, default=0)
     suggested_weight = db.Column(db.Float, nullable=True)  # AI-suggested next weight
     notes = db.Column(db.Text, nullable=True)  # Coach instructions shown in live workout
+    series_data = db.Column(db.Text, nullable=True, server_default=None)  # JSON: [{reps, weight}, ...] per series
     exercise = db.relationship('Exercise')
 
 

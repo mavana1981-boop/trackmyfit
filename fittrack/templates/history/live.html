@@ -115,10 +115,14 @@
         </div>
         {% endfor %}
     </div>
-    <div style="margin-top:16px;">
-        <button onclick="openFinish()" class="btn btn-red btn-block"
-            style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px;">
-            Finalizar Treino
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px;">
+        <button onclick="openAddEx()" class="btn btn-ghost"
+            style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+            + Exercício avulso
+        </button>
+        <button onclick="openFinish()" class="btn btn-red"
+            style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+            Finalizar
         </button>
     </div>
 </div>
@@ -240,9 +244,7 @@
     </div>
 </div>
 
-<!-- Add exercise button (only in detail screen) -->
-<button id="addExBtn" onclick="openAddEx()"
-    style="display:none; position:fixed; bottom:90px; right:16px; width:48px; height:48px; border-radius:50%; background:var(--bg3); border:1.5px solid var(--border); color:var(--text2); font-size:1.5rem; cursor:pointer; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,0.4);">+</button>
+
 
 <!-- Add exercise panel -->
 <div class="add-ex-panel" id="addExPanel">
@@ -344,14 +346,10 @@ updateClock(); setInterval(updateClock, 10000);
 function showOverview() {
     document.getElementById('overviewScreen').style.display = 'block';
     document.getElementById('detailScreen').style.display = 'none';
-    document.getElementById('addExBtn').style.display = 'none';
 }
 function openExercise(idx) {
     document.getElementById('overviewScreen').style.display = 'none';
     document.getElementById('detailScreen').style.display = 'block';
-    document.getElementById('addExBtn').style.display = 'flex';
-    document.getElementById('addExBtn').style.alignItems = 'center';
-    document.getElementById('addExBtn').style.justifyContent = 'center';
     document.querySelectorAll('.ex-dot').forEach(d => d.classList.remove('active'));
     document.querySelectorAll('.ex-card').forEach(c => c.classList.remove('active'));
     document.getElementById('dot'+idx).classList.add('active');

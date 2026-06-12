@@ -129,24 +129,51 @@
                 <!-- Inline edit -->
                 <div class="ex-edit-form" id="exEdit{{ pe.id }}">
                     <form method="POST" action="{{ url_for('workouts.edit_plan_exercise', plan_id=plan.id, pe_id=pe.id) }}">
-                        <label style="font-size:0.62rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; display:block; margin-bottom:5px;">Nome do exercício</label>
+                        <label class="form-label" style="display:block; margin-bottom:5px;">Nome do exercício</label>
                         <input class="ex-name-input" type="text" name="name" value="{{ pe.exercise.name }}" placeholder="Nome">
-                        <div class="ex-edit-grid">
-                            <div>
-                                <div style="font-size:0.6rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; text-align:center;">Séries</div>
-                                <input type="number" name="sets" value="{{ pe.sets }}" min="1" max="20">
+
+                        <!-- Series rows -->
+                        <div style="margin-bottom:10px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                                <div class="form-label">Séries</div>
+                                <button type="button" onclick="addSeriesRow({{ pe.id }})"
+                                    style="background:none; border:none; color:var(--red); font-size:0.75rem; font-weight:700; cursor:pointer;">+ Série</button>
                             </div>
-                            <div>
-                                <div style="font-size:0.6rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; text-align:center;">Reps</div>
-                                <input type="text" name="reps" value="{{ pe.reps }}" placeholder="10-12">
-                            </div>
-                            <div>
-                                <div style="font-size:0.6rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; text-align:center;">Descanso(s)</div>
-                                <input type="number" name="rest" value="{{ pe.rest_seconds }}" min="10" max="600">
+                            <div id="seriesRows{{ pe.id }}">
+                                {% if pe.series_data %}
+                                    {% set series = pe.series_data | fromjson %}
+                                    {% for s in series %}
+                                    <div class="series-row" style="display:grid; grid-template-columns:28px 1fr 28px; gap:6px; align-items:center; margin-bottom:6px;">
+                                        <span style="font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3); text-align:center;">{{ loop.index }}</span>
+                                        <input type="text" name="series_reps" class="form-control"
+                                            value="{{ s.reps }}" placeholder="Reps (ex: 10-12)"
+                                            style="font-size:0.85rem;">
+                                        <button type="button" onclick="removeSeriesRow(this)"
+                                            style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:1rem;">✕</button>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for i in range(pe.sets) %}
+                                    <div class="series-row" style="display:grid; grid-template-columns:28px 1fr 28px; gap:6px; align-items:center; margin-bottom:6px;">
+                                        <span style="font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3); text-align:center;">{{ loop.index }}</span>
+                                        <input type="text" name="series_reps" class="form-control"
+                                            value="{{ pe.reps }}" placeholder="Reps (ex: 10-12)"
+                                            style="font-size:0.85rem;">
+                                        <button type="button" onclick="removeSeriesRow(this)"
+                                            style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:1rem;">✕</button>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
                             </div>
                         </div>
+
                         <div style="margin-bottom:10px;">
-                            <div style="font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px; text-align:left;">Observações / instruções</div>
+                            <label class="form-label">Descanso (segundos)</label>
+                            <input type="number" name="rest" class="form-control" value="{{ pe.rest_seconds }}" min="10" max="600">
+                        </div>
+
+                        <div style="margin-bottom:10px;">
+                            <label class="form-label">Observações / instruções</label>
                             <textarea name="notes" class="form-control" rows="2"
                                 style="font-size:0.82rem; resize:none;"
                                 placeholder="Ex: Manter cotovelo fixo, descer controlado...">{{ pe.notes or '' }}</textarea>
@@ -238,6 +265,36 @@
 {% block extra_js %}
 <script>
 // Panel open/close
+// ── Series management ─────────────────────────────────────────────────────────
+function addSeriesRow(peId) {
+    const container = document.getElementById('seriesRows' + peId);
+    const rows = container.querySelectorAll('.series-row');
+    const idx = rows.length + 1;
+    const lastReps = rows.length > 0 ? rows[rows.length-1].querySelector('input[name="series_reps"]').value : '10-12';
+    const div = document.createElement('div');
+    div.className = 'series-row';
+    div.style.cssText = 'display:grid; grid-template-columns:28px 1fr 28px; gap:6px; align-items:center; margin-bottom:6px;';
+    div.innerHTML = `
+        <span class="series-num" style="font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3); text-align:center;">${idx}</span>
+        <input type="text" name="series_reps" class="form-control"
+            value="${lastReps}" placeholder="Reps (ex: 10-12)"
+            style="font-size:0.85rem;">
+        <button type="button" onclick="removeSeriesRow(this)"
+            style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1rem; padding:0;">✕</button>
+    `;
+    container.appendChild(div);
+}
+
+function removeSeriesRow(btn) {
+    const row = btn.closest('.series-row');
+    const container = row.parentElement;
+    if (container.querySelectorAll('.series-row').length <= 1) return;
+    row.remove();
+    // Renumber
+    container.querySelectorAll('.series-num').forEach((el, i) => el.textContent = i + 1);
+}
+
+// ── Panel open/close ──────────────────────────────────────────────────────────
 function openPanel(type, id, btn) {
     const target = document.getElementById((type==='ex'?'exPanel':'editPanel')+id);
     const isOpen = target.style.display === 'block';

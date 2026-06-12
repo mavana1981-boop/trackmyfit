@@ -419,4 +419,3 @@ def suggest_weight(plan_id, pe_id):
 def exercises_by_group(group_id):
     exercises = Exercise.query.filter_by(muscle_group_id=group_id).all()
     return jsonify([{'id': e.id, 'name': e.name, 'difficulty': e.difficulty} for e in exercises])
- 

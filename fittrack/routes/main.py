@@ -89,4 +89,3 @@ def dashboard():
                            all_groups=all_groups,
                            all_plans=all_plans,
                            today=today)
- 
