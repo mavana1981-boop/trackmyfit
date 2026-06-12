@@ -409,3 +409,4 @@ def record():
 
     today = _today_brazil().strftime('%Y-%m-%d')
     return render_template('history/record.html', plans=plans, groups=groups, today=today)
+ 
