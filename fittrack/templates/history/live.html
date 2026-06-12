@@ -77,6 +77,20 @@
 .ok-btn { width:100%; padding:14px; background:rgba(48,209,88,0.1); border:1.5px solid rgba(48,209,88,0.3); color:var(--success); border-radius:11px; font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px; cursor:pointer; margin-bottom:10px; transition:all 0.15s; }
 .ok-btn:active { transform:scale(0.98); }
 
+/* Add exercise panel */
+.add-ex-panel { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:250; flex-direction:column; overflow-y:auto; }
+.add-ex-panel.active { display:flex; }
+.add-ex-inner { background:var(--bg2); border-radius:18px 18px 0 0; padding:20px 18px 48px; margin-top:auto; border-top:1px solid var(--border); max-height:85vh; overflow-y:auto; }
+.add-ex-title { font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:0.5px; margin-bottom:14px; }
+.ex-search-list { background:var(--bg3); border:1px solid var(--border); border-radius:10px; overflow:hidden; max-height:220px; overflow-y:auto; margin-bottom:12px; }
+.ex-search-item { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s; }
+.ex-search-item:last-child { border-bottom:none; }
+.ex-search-item:active { background:var(--bg4); }
+.ex-search-item.sel { background:var(--red-glow); }
+.ex-search-name { flex:1; font-weight:600; font-size:0.84rem; }
+.ex-sel-dot { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--border2); flex-shrink:0; }
+.ex-search-item.sel .ex-sel-dot { background:var(--red); border-color:var(--red); }
+
 /* Finish modal */
 .finish-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:300; flex-direction:column; overflow-y:auto; }
 .finish-modal.active { display:flex; }
@@ -226,6 +240,48 @@
     </div>
 </div>
 
+<!-- Add exercise button (only in detail screen) -->
+<button id="addExBtn" onclick="openAddEx()"
+    style="display:none; position:fixed; bottom:90px; right:16px; width:48px; height:48px; border-radius:50%; background:var(--bg3); border:1.5px solid var(--border); color:var(--text2); font-size:1.5rem; cursor:pointer; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,0.4);">+</button>
+
+<!-- Add exercise panel -->
+<div class="add-ex-panel" id="addExPanel">
+    <div class="add-ex-inner">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+            <div class="add-ex-title">Adicionar Exercício</div>
+            <button onclick="closeAddEx()" style="background:none; border:none; color:var(--text2); font-size:1.3rem; cursor:pointer;">✕</button>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Grupo muscular</label>
+            <select id="addExGroup" class="form-control" onchange="loadAddExList()">
+                {% for g in all_groups %}
+                <option value="{{ g.id }}">{{ g.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Exercício</label>
+            <div class="ex-search-list" id="addExList">
+                <div style="padding:12px 14px; color:var(--text2); font-size:0.8rem;">Selecione um grupo acima</div>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+            <div>
+                <label class="form-label">Séries</label>
+                <input type="number" id="addExSets" class="form-control" value="3" min="1" max="20">
+            </div>
+            <div>
+                <label class="form-label">Reps</label>
+                <input type="text" id="addExReps" class="form-control" value="10-12">
+            </div>
+        </div>
+        <button onclick="confirmAddEx()" class="btn btn-red btn-block"
+            style="font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.5px;">
+            + Adicionar ao treino
+        </button>
+    </div>
+</div>
+
 <!-- Submit form -->
 <form method="POST" action="{{ url_for('history.save_live') }}" id="finishForm" style="display:none;">
     <input type="hidden" name="session_id" id="formSessionId" value="{{ session_id }}">
@@ -288,10 +344,14 @@ updateClock(); setInterval(updateClock, 10000);
 function showOverview() {
     document.getElementById('overviewScreen').style.display = 'block';
     document.getElementById('detailScreen').style.display = 'none';
+    document.getElementById('addExBtn').style.display = 'none';
 }
 function openExercise(idx) {
     document.getElementById('overviewScreen').style.display = 'none';
     document.getElementById('detailScreen').style.display = 'block';
+    document.getElementById('addExBtn').style.display = 'flex';
+    document.getElementById('addExBtn').style.alignItems = 'center';
+    document.getElementById('addExBtn').style.justifyContent = 'center';
     document.querySelectorAll('.ex-dot').forEach(d => d.classList.remove('active'));
     document.querySelectorAll('.ex-card').forEach(c => c.classList.remove('active'));
     document.getElementById('dot'+idx).classList.add('active');
