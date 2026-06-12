@@ -46,7 +46,7 @@
 .sets-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:10px; }
 .sets-head { display:grid; grid-template-columns:28px 1fr 1fr 36px; gap:4px; padding:7px 12px; background:var(--bg4); border-bottom:1px solid var(--border); }
 .sets-head span { font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; text-align:center; }
-.set-row { display:grid; grid-template-columns:28px 1fr 1fr 36px; gap:4px; padding:7px 12px; border-bottom:1px solid var(--border); align-items:center; }
+.set-row { display:grid; grid-template-columns:28px 1fr 1fr 36px 24px; gap:4px; padding:7px 12px; border-bottom:1px solid var(--border); align-items:center; }
 .set-row:last-child { border-bottom:none; }
 .set-row.done-row { background:rgba(232,25,44,0.04); }
 .set-num { font-family:'Bebas Neue',sans-serif; font-size:0.88rem; color:var(--text3); text-align:center; }
@@ -77,6 +77,20 @@
 .ok-btn { width:100%; padding:14px; background:rgba(48,209,88,0.1); border:1.5px solid rgba(48,209,88,0.3); color:var(--success); border-radius:11px; font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px; cursor:pointer; margin-bottom:10px; transition:all 0.15s; }
 .ok-btn:active { transform:scale(0.98); }
 
+/* Add exercise panel */
+.add-ex-panel { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:250; flex-direction:column; overflow-y:auto; }
+.add-ex-panel.active { display:flex; }
+.add-ex-inner { background:var(--bg2); border-radius:18px 18px 0 0; padding:20px 18px 48px; margin-top:auto; border-top:1px solid var(--border); max-height:85vh; overflow-y:auto; }
+.add-ex-title { font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:0.5px; margin-bottom:14px; }
+.ex-search-list { background:var(--bg3); border:1px solid var(--border); border-radius:10px; overflow:hidden; max-height:220px; overflow-y:auto; margin-bottom:12px; }
+.ex-search-item { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s; }
+.ex-search-item:last-child { border-bottom:none; }
+.ex-search-item:active { background:var(--bg4); }
+.ex-search-item.sel { background:var(--red-glow); }
+.ex-search-name { flex:1; font-weight:600; font-size:0.84rem; }
+.ex-sel-dot { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--border2); flex-shrink:0; }
+.ex-search-item.sel .ex-sel-dot { background:var(--red); border-color:var(--red); }
+
 /* Finish modal */
 .finish-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:300; flex-direction:column; overflow-y:auto; }
 .finish-modal.active { display:flex; }
@@ -101,10 +115,14 @@
         </div>
         {% endfor %}
     </div>
-    <div style="margin-top:16px;">
-        <button onclick="openFinish()" class="btn btn-red btn-block"
-            style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.5px;">
-            Finalizar Treino
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px;">
+        <button onclick="openAddEx()" class="btn btn-ghost"
+            style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+            + Exercício avulso
+        </button>
+        <button onclick="openFinish()" class="btn btn-red"
+            style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+            Finalizar
         </button>
     </div>
 </div>
@@ -140,8 +158,8 @@
 
             <!-- Dynamic sets table -->
             <div class="sets-card">
-                <div class="sets-head">
-                    <span>#</span><span>Kg</span><span>Reps</span><span>✓</span>
+                <div class="sets-head" style="grid-template-columns:28px 1fr 1fr 36px 28px;">
+                    <span>#</span><span>Kg</span><span>Reps</span><span>✓</span><span></span>
                 </div>
                 <div id="setsBody{{ loop.index0 }}">
                     {% set ei = loop.index0 %}
@@ -165,6 +183,8 @@
                                 value="{{ s.reps }}" placeholder="—"
                                 oninput="trackChange({{ ei }}, {{ si }})">
                             <button class="set-check" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
+                            <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
+                                style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -185,6 +205,8 @@
                                 value="{{ ex.reps }}" placeholder="—"
                                 oninput="trackChange({{ ei }}, {{ si }})">
                             <button class="set-check" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
+                            <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
+                                style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
                         </div>
                         {% endfor %}
                     {% endif %}
@@ -219,6 +241,46 @@
 
         </div>
         {% endfor %}
+    </div>
+</div>
+
+
+
+<!-- Add exercise panel -->
+<div class="add-ex-panel" id="addExPanel">
+    <div class="add-ex-inner">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+            <div class="add-ex-title">Adicionar Exercício</div>
+            <button onclick="closeAddEx()" style="background:none; border:none; color:var(--text2); font-size:1.3rem; cursor:pointer;">✕</button>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Grupo muscular</label>
+            <select id="addExGroup" class="form-control" onchange="loadAddExList()">
+                {% for g in all_groups %}
+                <option value="{{ g.id }}">{{ g.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Exercício</label>
+            <div class="ex-search-list" id="addExList">
+                <div style="padding:12px 14px; color:var(--text2); font-size:0.8rem;">Selecione um grupo acima</div>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+            <div>
+                <label class="form-label">Séries</label>
+                <input type="number" id="addExSets" class="form-control" value="3" min="1" max="20">
+            </div>
+            <div>
+                <label class="form-label">Reps</label>
+                <input type="text" id="addExReps" class="form-control" value="10-12">
+            </div>
+        </div>
+        <button onclick="confirmAddEx()" class="btn btn-red btn-block"
+            style="font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.5px;">
+            + Adicionar ao treino
+        </button>
     </div>
 </div>
 
@@ -298,6 +360,11 @@ function openExercise(idx) {
 // Track field changes
 function trackChange(ei, si) {
     changed[ei+'_'+si] = true;
+    // Also mark dataset.changed on the inputs
+    const wEl = document.getElementById('w'+ei+'_'+si);
+    const rEl = document.getElementById('r'+ei+'_'+si);
+    if (wEl) wEl.dataset.changed = '1';
+    if (rEl) rEl.dataset.changed = '1';
 }
 
 // Check set ✓
@@ -313,7 +380,6 @@ function addSet(ei) {
     const body = document.getElementById('setsBody'+ei);
     const rows = body.querySelectorAll('.set-row');
     const si = rows.length;
-    // Get last weight as default
     const lastW = document.getElementById('w'+ei+'_'+(si-1))?.value || '';
     const lastR = document.getElementById('r'+ei+'_'+(si-1))?.value || '';
     const div = document.createElement('div');
@@ -330,10 +396,29 @@ function addSet(ei) {
             id="r${ei}_${si}" value="${lastR}" placeholder="—"
             oninput="trackChange(${ei}, ${si})">
         <button class="set-check" onclick="checkSet(${ei}, ${si})">✓</button>
+        <button type="button" onclick="removeSetRow(${ei}, ${si}, this)"
+            style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
     `;
     body.appendChild(div);
-    // Mark as changed since user explicitly added it
     changed[ei+'_'+si] = true;
+    // Mark new set inputs as changed (user explicitly added this set)
+    setTimeout(() => {
+        const wEl = document.getElementById('w'+ei+'_'+si);
+        const rEl = document.getElementById('r'+ei+'_'+si);
+        if (wEl) wEl.dataset.changed = '1';
+        if (rEl) rEl.dataset.changed = '1';
+    }, 10);
+}
+
+function removeSetRow(ei, si, btn) {
+    const body = document.getElementById('setsBody'+ei);
+    if (body.querySelectorAll('.set-row').length <= 1) return; // keep at least 1
+    const row = document.getElementById('sr'+ei+'_'+si) || btn.closest('.set-row');
+    if (row) row.remove();
+    // Renumber remaining rows
+    body.querySelectorAll('.set-row').forEach((r, i) => {
+        r.querySelector('.set-num').textContent = i + 1;
+    });
 }
 
 // Collect all sets for an exercise
@@ -341,10 +426,14 @@ function collectSets(ei) {
     const rows = document.querySelectorAll('[id^="sr'+ei+'_"]');
     const sets = [];
     rows.forEach((_, si) => {
-        const w = document.getElementById('w'+ei+'_'+si)?.value?.trim() || '';
-        const r = document.getElementById('r'+ei+'_'+si)?.value?.trim() || '';
-        const isChanged = changed[ei+'_'+si];
-        if (r && isChanged) {
+        const wEl = document.getElementById('w'+ei+'_'+si);
+        const rEl = document.getElementById('r'+ei+'_'+si);
+        const w = wEl?.value?.trim() || '';
+        const r = rEl?.value?.trim() || '';
+        const wChanged = wEl?.dataset.changed === '1';
+        const rChanged = rEl?.dataset.changed === '1';
+        // Only save if user explicitly changed weight OR reps, AND reps is filled
+        if (r && (wChanged || rChanged)) {
             sets.push({ weight: w ? parseFloat(w) : null, reps: r });
         }
     });
