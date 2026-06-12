@@ -57,7 +57,21 @@ def detail(session_id):
     session = WorkoutSession.query.filter_by(
         id=session_id, user_id=current_user.id).first_or_404()
     groups = MuscleGroup.query.all()
-    return render_template('history/detail.html', session=session, all_groups=groups)
+
+    # Group session_exercises by exercise_id — each group = one exercise card
+    from collections import OrderedDict
+    grouped = OrderedDict()
+    for se in session.session_exercises:
+        eid = se.exercise_id
+        if eid not in grouped:
+            grouped[eid] = {'exercise': se.exercise, 'sets': []}
+        grouped[eid]['sets'].append(se)
+    exercise_groups = list(grouped.values())
+
+    return render_template('history/detail.html',
+                           session=session,
+                           all_groups=groups,
+                           exercise_groups=exercise_groups)
 
 
 @history_bp.route('/history/<int:session_id>/edit', methods=['POST'])
@@ -409,4 +423,3 @@ def record():
 
     today = _today_brazil().strftime('%Y-%m-%d')
     return render_template('history/record.html', plans=plans, groups=groups, today=today)
- 
