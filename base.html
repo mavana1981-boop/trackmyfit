@@ -169,16 +169,7 @@
     {% if current_user.is_authenticated %}
     <nav class="bottom-nav">
         <a href="{{ url_for('main.dashboard') }}" class="nav-item {% if request.blueprint == 'main' %}active{% endif %}">
-            <span class="nav-icon">⚡</span>Início
-        </a>
-        <a href="{{ url_for('workouts.index') }}" class="nav-item {% if request.blueprint == 'workouts' %}active{% endif %}">
-            <span class="nav-icon">📋</span>Planos
-        </a>
-        <a href="{{ url_for('history.start') }}" class="nav-item {% if request.endpoint in ['history.start','history.live'] %}active{% endif %}">
-            <span class="nav-icon">▶</span>Treinar
-        </a>
-        <a href="{{ url_for('history.index') }}" class="nav-item {% if request.blueprint == 'history' and request.endpoint not in ['history.start','history.live','history.save_live'] %}active{% endif %}">
-            <span class="nav-icon">📅</span>Histórico
+            <span class="nav-icon">⚡</span>Home
         </a>
     </nav>
     {% endif %}
