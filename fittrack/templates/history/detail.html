@@ -1,3 +1,4 @@
+<!-- FITTRACK-DETAIL-v7-20260612-1140 -->
 {% extends 'base.html' %}
 {% block title %}{{ session.display_name }}{% endblock %}
 {% block topbar %}
@@ -37,7 +38,7 @@
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
             {% if session.duration_minutes %}<span class="badge badge-muted">⏱ {{ session.duration_minutes }}min</span>{% endif %}
-            <span class="badge badge-muted">{{ session.session_exercises|length }} exercícios</span>
+            <span class="badge badge-muted">{{ session.session_exercises|map(attribute='exercise_id')|list|unique|list|length }} exercício(s)</span>
         </div>
         {% if session.effective_muscle_groups %}
         <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:10px;">
@@ -89,33 +90,43 @@
     {% endif %}
 
     <div class="section-header" style="margin-bottom:10px;"><span class="section-title">Exercícios</span></div>
+
+    {# Group session_exercises by exercise_id #}
+    {% set seen_ex = namespace(ids=[], idx=0) %}
     {% for se in session.session_exercises %}
+        {% if se.exercise_id not in seen_ex.ids %}
+            {% set _ = seen_ex.ids.append(se.exercise_id) %}
+            {% set _ = seen_ex.__setattr__('idx', seen_ex.idx + 1) %}
+            {# Collect all sets for this exercise #}
+            {% set ex_sets = session.session_exercises | selectattr('exercise_id', 'equalto', se.exercise_id) | list %}
     <div class="card" style="margin-bottom:10px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-            <div style="width:28px; height:28px; border-radius:8px; background:var(--red); color:white; font-family:'Syne',sans-serif; font-weight:800; font-size:0.8rem; display:flex; align-items:center; justify-content:center;">{{ loop.index }}</div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <div style="width:28px; height:28px; border-radius:8px; background:var(--red); color:white; font-family:'Bebas Neue',sans-serif; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">{{ seen_ex.idx }}</div>
             <div>
-                <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:0.9rem;">{{ se.exercise.name }}</div>
-                <div style="font-size:0.72rem; color:var(--text2);">{{ se.exercise.muscle_group.name }}</div>
+                <div style="font-weight:700; font-size:0.9rem;">{{ se.exercise.name }}</div>
+                <div style="font-size:0.7rem; color:var(--text2);">{{ se.exercise.muscle_group.name }}</div>
             </div>
+            <div style="margin-left:auto; font-size:0.72rem; color:var(--text2); font-weight:600;">{{ ex_sets|length }} série{% if ex_sets|length != 1 %}s{% endif %}</div>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-            <div style="text-align:center; background:var(--bg4); border-radius:10px; padding:10px 4px;">
-                <div style="font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:800; color:var(--red);">{{ se.sets_done or '—' }}</div>
-                <div style="font-size:0.62rem; color:var(--text2); font-weight:700; text-transform:uppercase;">Séries</div>
+        {# Table of sets #}
+        <div style="background:var(--bg4); border-radius:10px; overflow:hidden;">
+            <div style="display:grid; grid-template-columns:28px 1fr 1fr; gap:4px; padding:6px 12px; border-bottom:1px solid var(--border);">
+                <span style="font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; text-align:center;">#</span>
+                <span style="font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; text-align:center;">Carga</span>
+                <span style="font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; text-align:center;">Reps</span>
             </div>
-            <div style="text-align:center; background:var(--bg4); border-radius:10px; padding:10px 4px;">
-                <div style="font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:800;">{{ se.reps_done or '—' }}</div>
-                <div style="font-size:0.62rem; color:var(--text2); font-weight:700; text-transform:uppercase;">Reps</div>
+            {% for s in ex_sets %}
+            <div style="display:grid; grid-template-columns:28px 1fr 1fr; gap:4px; padding:8px 12px; border-bottom:1px solid var(--border); {% if loop.last %}border-bottom:none;{% endif %}">
+                <div style="font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3); text-align:center;">{{ loop.index }}</div>
+                <div style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; color:var(--red); text-align:center;">{{ s.weight_kg|string + 'kg' if s.weight_kg else '—' }}</div>
+                <div style="font-weight:600; font-size:0.85rem; text-align:center;">{{ s.reps_done or '—' }}</div>
             </div>
-            <div style="text-align:center; background:var(--bg4); border-radius:10px; padding:10px 4px;">
-                <div style="font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:800;">{{ (se.weight_kg|string+'kg') if se.weight_kg else '—' }}</div>
-                <div style="font-size:0.62rem; color:var(--text2); font-weight:700; text-transform:uppercase;">Carga</div>
-            </div>
+            {% endfor %}
         </div>
     </div>
+        {% endif %}
     {% else %}
     <div class="empty-state" style="padding:24px 0;">
-        <div class="empty-icon">💪</div>
         <div class="empty-title">Nenhum exercício registrado</div>
     </div>
     {% endfor %}
