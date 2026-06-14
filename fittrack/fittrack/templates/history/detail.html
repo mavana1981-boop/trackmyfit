@@ -1,9 +1,8 @@
-<!-- FITTRACK-DETAIL-v7-20260612-1140 -->
 {% extends 'base.html' %}
-{% block title %}{{ session.display_name }}{% endblock %}
+{% block title %}Detalhe{% endblock %}
 {% block topbar %}
 <div class="topbar">
-    <a href="{{ url_for('history.index') }}" class="topbar-back">←</a>
+    <a href="/history" class="topbar-back">←</a>
     <h1>DETALHE</h1>
     <div class="topbar-right">
         <button onclick="toggleEdit()" class="topbar-btn" id="editBtn">✏️ Editar</button>
@@ -12,149 +11,143 @@
 {% endblock %}
 {% block extra_css %}
 <style>
-.group-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-.group-chip {
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--bg4); border:1.5px solid var(--border);
-    border-radius:10px; padding:9px 14px; cursor:pointer;
-    transition:all 0.15s; font-family:'Syne',sans-serif;
-    font-weight:700; font-size:0.8rem; color:var(--text2);
-    user-select:none;
-}
-.group-chip.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
-#editPanel { display:none; margin-bottom:14px; }
+.group-chip{display:inline-flex;align-items:center;background:var(--bg4);border:1.5px solid var(--border);border-radius:10px;padding:8px 13px;cursor:pointer;font-weight:700;font-size:0.78rem;color:var(--text2);user-select:none;}
+.group-chip.sel{border-color:var(--red);background:var(--red-glow);color:var(--red);}
+.group-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+#editPanel{display:none;margin-bottom:14px;}
+.ex-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+.ex-header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.ex-num{width:26px;height:26px;border-radius:7px;background:var(--red);color:white;font-family:'Bebas Neue',sans-serif;font-size:0.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ex-name{font-weight:700;font-size:0.88rem;}
+.ex-group-lbl{font-size:0.68rem;color:var(--text2);margin-top:1px;}
+.sets-tbl{width:100%;border-collapse:collapse;}
+.sets-tbl th{font-size:0.56rem;font-weight:700;color:var(--text3);text-transform:uppercase;padding:6px 12px;text-align:center;background:var(--bg4);}
+.sets-tbl td{font-size:0.84rem;padding:8px 12px;text-align:center;border-top:1px solid var(--border);}
+.sets-tbl td.n{color:var(--text3);font-family:'Bebas Neue',sans-serif;}
+.sets-tbl td.k{color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:0.95rem;}
+.sets-tbl td.r{font-weight:600;}
 </style>
 {% endblock %}
 {% block content %}
 <div class="content">
 
-    <!-- Header -->
-    <div class="card" style="background:var(--bg2); margin-bottom:14px; padding:20px;">
-        <div style="font-size:0.65rem; color:var(--red); font-weight:800; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px;">
-            {{ session.date.strftime('%d de %B de %Y') }}
+    <div class="card" style="background:var(--bg2);margin-bottom:14px;padding:18px;">
+        <div style="font-size:0.62rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">
+            {{ session.date.strftime('%d/%m/%Y') }}
         </div>
-        <div style="font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:800; margin-bottom:10px;" id="displayName">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.5px;margin-bottom:10px;">
             {{ session.display_name }}
         </div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            {% if session.duration_minutes %}<span class="badge badge-muted">⏱ {{ session.duration_minutes }}min</span>{% endif %}
-            <span class="badge badge-muted">{{ exercise_groups|length }} exercício(s)</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            {% if session.duration_minutes %}<span class="badge badge-muted">{{ session.duration_minutes }}min</span>{% endif %}
+            {% for g in session.effective_muscle_groups %}<span class="badge badge-red">{{ g.name }}</span>{% endfor %}
         </div>
-        {% if session.effective_muscle_groups %}
-        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:10px;">
-            {% for g in session.effective_muscle_groups %}
-            <span class="badge badge-red">{{ g.icon }} {{ g.name }}</span>
-            {% endfor %}
-        </div>
-        {% endif %}
     </div>
 
     <!-- Edit panel -->
     <div id="editPanel">
         <form method="POST" action="{{ url_for('history.edit', session_id=session.id) }}" id="editForm">
             <div class="card" style="margin-bottom:12px;">
-                <div class="form-group" style="margin-bottom:14px;">
+                <div class="form-group" style="margin-bottom:12px;">
                     <label class="form-label">Nome do treino</label>
-                    <input type="text" name="custom_name" id="nameInput" class="form-control"
+                    <input type="text" name="custom_name" class="form-control"
                         value="{{ session.custom_name or '' }}"
                         placeholder="{{ session.plan.name if session.plan else 'Treino Avulso' }}">
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">Grupos musculares treinados</label>
+                    <label class="form-label">Grupos musculares</label>
                     <div class="group-chips" id="groupChips">
                         {% set sel_ids = session.muscle_groups | map(attribute='id') | list %}
                         {% for g in all_groups %}
                         <div class="group-chip {{ 'sel' if g.id in sel_ids }}"
-                             data-id="{{ g.id }}"
-                             onclick="toggleChip(this)">
-                            {{ g.icon }} {{ g.name }}
-                        </div>
+                             data-id="{{ g.id }}" onclick="this.classList.toggle('sel')">{{ g.name }}</div>
                         {% endfor %}
                     </div>
-                    <!-- Hidden checkboxes submitted with form -->
                     <div id="hiddenGroups"></div>
                 </div>
             </div>
-            <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <div style="display:flex;gap:8px;margin-bottom:14px;">
                 <button type="button" onclick="toggleEdit()" class="btn btn-ghost" style="flex:1;">Cancelar</button>
-                <button type="button" onclick="submitEdit()" class="btn btn-red" style="flex:1;">💾 Salvar</button>
+                <button type="button" onclick="submitEdit()" class="btn btn-red" style="flex:1;">Salvar</button>
             </div>
         </form>
     </div>
 
-    {% if session.notes %}
-    <div class="card" style="margin-bottom:12px; border-left:3px solid var(--red);">
-        <div style="font-size:0.65rem; color:var(--text2); font-weight:800; text-transform:uppercase; margin-bottom:5px;">Obs.</div>
-        <p style="font-size:0.9rem; color:var(--text2);">{{ session.notes }}</p>
-    </div>
-    {% endif %}
-
     <div class="section-header" style="margin-bottom:10px;"><span class="section-title">Exercícios</span></div>
 
-    {% if exercise_groups %}
-        {% for eg in exercise_groups %}
-    <div class="card" style="margin-bottom:10px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-            <div style="width:28px; height:28px; border-radius:8px; background:var(--red); color:white; font-family:'Bebas Neue',sans-serif; font-size:0.9rem; display:flex; align-items:center; justify-content:center;">{{ loop.index }}</div>
-            <div>
-                <div style="font-weight:700; font-size:0.9rem;">{{ eg.exercise.name }}</div>
-                <div style="font-size:0.7rem; color:var(--text2);">{{ eg.exercise.muscle_group.name }}</div>
-            </div>
-            <div style="margin-left:auto; font-size:0.72rem; color:var(--text2); font-weight:600;">{{ eg.sets|length }} série{% if eg.sets|length != 1 %}s{% endif %}</div>
-        </div>
-        <div style="background:var(--bg4); border-radius:10px; overflow:hidden;">
-            <div style="display:grid; grid-template-columns:28px 1fr 1fr; gap:4px; padding:6px 12px; border-bottom:1px solid var(--border);">
-                <span style="font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; text-align:center;">#</span>
-                <span style="font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; text-align:center;">Carga</span>
-                <span style="font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; text-align:center;">Reps</span>
-            </div>
-            {% for s in eg.sets %}
-            <div style="display:grid; grid-template-columns:28px 1fr 1fr; gap:4px; padding:8px 12px; {% if not loop.last %}border-bottom:1px solid var(--border);{% endif %}">
-                <div style="font-family:'Bebas Neue',sans-serif; font-size:0.9rem; color:var(--text3); text-align:center;">{{ loop.index }}</div>
-                <div style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; color:var(--red); text-align:center;">{{ s.weight_kg|string + 'kg' if s.weight_kg else '—' }}</div>
-                <div style="font-weight:600; font-size:0.85rem; text-align:center;">{{ s.reps_done or '—' }}</div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-        {% endfor %}
-    {% else %}
-    <div class="empty-state" style="padding:24px 0;">
-        <div class="empty-title">Nenhum exercício registrado</div>
-    </div>
-    {% endif %}
+    <!-- Exercise data embedded as JSON — no Jinja2 logic needed -->
+    <script id="exerciseData" type="application/json">
+    [{% for se in session.session_exercises %}{
+        "ex_id":{{ se.exercise_id }},
+        "name":"{{ se.exercise.name | replace('"', '\\"') }}",
+        "group":"{{ se.exercise.muscle_group.name }}",
+        "kg":{{ se.weight_kg if se.weight_kg is not none else 'null' }},
+        "reps":"{{ se.reps_done or '' }}"
+    }{% if not loop.last %},{% endif %}{% endfor %}]
+    </script>
+
+    <div id="exContainer"></div>
 
     <hr class="divider">
-    <form method="POST" action="{{ url_for('history.delete', session_id=session.id) }}" onsubmit="return confirm('Remover este registro?')">
-        <button type="submit" class="btn btn-danger btn-block">🗑 Remover registro</button>
+    <form method="POST" action="{{ url_for('history.delete', session_id=session.id) }}"
+          onsubmit="return confirm('Remover este registro?')">
+        <button type="submit" class="btn btn-danger btn-block">Remover registro</button>
     </form>
 </div>
 {% endblock %}
 {% block extra_js %}
 <script>
-function toggleEdit() {
-    const p = document.getElementById('editPanel');
-    const b = document.getElementById('editBtn');
-    const open = p.style.display !== 'block';
-    p.style.display = open ? 'block' : 'none';
-    b.textContent = open ? '✕ Fechar' : '✏️ Editar';
-    if (open) p.scrollIntoView({behavior:'smooth', block:'start'});
-}
+// Group exercises client-side from embedded JSON
+(function(){
+    const raw = JSON.parse(document.getElementById('exerciseData').textContent);
+    if (!raw.length) {
+        document.getElementById('exContainer').innerHTML =
+            '<div class="empty-state" style="padding:24px 0;"><div class="empty-title">Nenhum exercício registrado</div></div>';
+        return;
+    }
+    const groups = {}, order = [];
+    raw.forEach(s => {
+        if (!groups[s.ex_id]) { groups[s.ex_id]={name:s.name,group:s.group,sets:[]}; order.push(s.ex_id); }
+        groups[s.ex_id].sets.push(s);
+    });
+    const c = document.getElementById('exContainer');
+    order.forEach((eid,i) => {
+        const eg = groups[eid];
+        const rows = eg.sets.map((s,si)=>`<tr>
+            <td class="n">${si+1}</td>
+            <td class="k">${s.kg!=null?s.kg+'kg':'—'}</td>
+            <td class="r">${s.reps||'—'}</td>
+        </tr>`).join('');
+        c.innerHTML += `<div class="ex-card">
+            <div class="ex-header">
+                <div class="ex-num">${i+1}</div>
+                <div style="flex:1;min-width:0;">
+                    <div class="ex-name">${eg.name}</div>
+                    <div class="ex-group-lbl">${eg.group}</div>
+                </div>
+                <div style="font-size:0.7rem;color:var(--text2);">${eg.sets.length}×</div>
+            </div>
+            <table class="sets-tbl">
+                <thead><tr><th>#</th><th>Carga</th><th>Reps</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+    });
+})();
 
-function toggleChip(el) {
-    el.classList.toggle('sel');
+function toggleEdit(){
+    const p=document.getElementById('editPanel');
+    const b=document.getElementById('editBtn');
+    const open=p.style.display!=='block';
+    p.style.display=open?'block':'none';
+    b.textContent=open?'✕ Fechar':'✏️ Editar';
 }
-
-function submitEdit() {
-    // Remove old hidden inputs
-    const hg = document.getElementById('hiddenGroups');
-    hg.innerHTML = '';
-    // Add one hidden input per selected chip
-    document.querySelectorAll('#groupChips .group-chip.sel').forEach(chip => {
-        const inp = document.createElement('input');
-        inp.type = 'hidden';
-        inp.name = 'muscle_group_ids';
-        inp.value = chip.dataset.id;
+function submitEdit(){
+    const hg=document.getElementById('hiddenGroups');
+    hg.innerHTML='';
+    document.querySelectorAll('#groupChips .group-chip.sel').forEach(chip=>{
+        const inp=document.createElement('input');
+        inp.type='hidden';inp.name='muscle_group_ids';inp.value=chip.dataset.id;
         hg.appendChild(inp);
     });
     document.getElementById('editForm').submit();
