@@ -259,16 +259,27 @@ def save_exercise_realtime():
             id=int(session_id), user_id=current_user.id).first()
 
     if not ws:
-        ws = WorkoutSession(
+        today = _today_brazil()
+        pid = int(plan_id_fs) if plan_id_fs else None
+        # Reuse existing session for same plan+day (user re-entering same workout)
+        existing = WorkoutSession.query.filter_by(
             user_id=current_user.id,
-            plan_id=int(plan_id_fs) if plan_id_fs else None,
-            date=_today_brazil(),
-        )
-        db.session.add(ws)
-        db.session.flush()
-        if group_ids_fs:
-            _attach_muscle_groups(ws, [int(g) for g in group_ids_fs])
-        db.session.commit()
+            plan_id=pid,
+            date=today
+        ).first()
+        if existing:
+            ws = existing
+        else:
+            ws = WorkoutSession(
+                user_id=current_user.id,
+                plan_id=pid,
+                date=today,
+            )
+            db.session.add(ws)
+            db.session.flush()
+            if group_ids_fs:
+                _attach_muscle_groups(ws, [int(g) for g in group_ids_fs])
+            db.session.commit()
 
     # Validate: at least one set with reps
     valid_sets = []
