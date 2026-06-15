@@ -500,6 +500,140 @@ async function exitWorkout() {
 }
 
 // Finish
+// ── Back button ───────────────────────────────────────────────────────────────
+function goBackOrExit() {
+    const detail = document.getElementById('detailScreen');
+    if (detail && detail.style.display === 'block') {
+        showOverview();
+        return;
+    }
+    const hasAny = document.querySelectorAll('.ex-dot.has-data').length > 0;
+    if (!confirm(hasAny ? 'Sair? Os exercícios marcados já foram salvos.' : 'Sair? Treino será cancelado.')) return;
+    if (sessionId && sessionId !== 'pending') {
+        fetch('/live/cancel/' + sessionId, {method:'POST'}).catch(()=>{});
+    }
+    window.location.href = '/start';
+}
+
+// ── Add exercise panel ─────────────────────────────────────────────────────────
+let addExSelectedId = null;
+
+function openAddEx() {
+    addExSelectedId = null;
+    document.getElementById('addExPanel').classList.add('active');
+    loadAddExList();
+}
+
+function closeAddEx() {
+    document.getElementById('addExPanel').classList.remove('active');
+    addExSelectedId = null;
+}
+
+async function loadAddExList() {
+    const gid = document.getElementById('addExGroup').value;
+    if (!gid) return;
+    const list = document.getElementById('addExList');
+    list.innerHTML = '<div style="padding:12px 14px;color:var(--text2);font-size:0.8rem;">Carregando...</div>';
+    try {
+        const resp = await fetch('/live/exercises-by-group/' + gid);
+        const exs = await resp.json();
+        if (!exs.length) {
+            list.innerHTML = '<div style="padding:12px 14px;color:var(--text2);font-size:0.8rem;">Nenhum exercício</div>';
+            return;
+        }
+        list.innerHTML = exs.map(ex => `
+            <div class="ex-search-item" id="addExItem${ex.id}"
+                 onclick="selectAddEx(${ex.id},'${ex.name.replace(/'/g,"\'").replace(/"/g,'\"')}')">
+                <div class="ex-search-name">${ex.name}</div>
+                <div class="ex-sel-dot"></div>
+            </div>`).join('');
+    } catch(e) {
+        list.innerHTML = '<div style="padding:12px 14px;color:var(--danger);font-size:0.8rem;">Erro ao carregar</div>';
+    }
+}
+
+function selectAddEx(id, name) {
+    document.querySelectorAll('.ex-search-item').forEach(el => el.classList.remove('sel'));
+    const el = document.getElementById('addExItem' + id);
+    if (el) el.classList.add('sel');
+    addExSelectedId = id;
+}
+
+function confirmAddEx() {
+    if (!addExSelectedId) { alert('Selecione um exercício'); return; }
+    const sets = parseInt(document.getElementById('addExSets').value) || 3;
+    const reps = document.getElementById('addExReps').value || '10-12';
+    const nameEl = document.querySelector('#addExItem' + addExSelectedId + ' .ex-search-name');
+    const name = nameEl ? nameEl.textContent : 'Exercício';
+
+    const ei = exerciseIds.length;
+    exerciseIds.push(addExSelectedId);
+    if (!setCounters[ei]) setCounters[ei] = sets;
+
+    // Add dot
+    const nav = document.getElementById('exNav');
+    const dot = document.createElement('div');
+    dot.className = 'ex-dot';
+    dot.id = 'dot' + ei;
+    dot.textContent = ei + 1;
+    dot.onclick = () => openExercise(ei);
+    nav.appendChild(dot);
+
+    // Add grid card
+    const grid = document.getElementById('exGrid');
+    const gc = document.createElement('div');
+    gc.className = 'ex-grid-card';
+    gc.id = 'gc' + ei;
+    gc.onclick = () => openExercise(ei);
+    gc.innerHTML = `<div class="gc-name">${name}</div><div class="gc-meta">${sets}× ${reps}</div>`;
+    grid.appendChild(gc);
+
+    // Build set rows
+    let setRows = '';
+    for (let si = 0; si < sets; si++) {
+        setRows += `<div class="set-row" id="sr${ei}_${si}" style="grid-template-columns:28px 1fr 1fr 36px 24px;">
+            <div class="set-num">${si+1}</div>
+            <div class="set-inp-wrap">
+                <input class="set-inp" type="number" step="0.5" min="0"
+                    id="w${ei}_${si}" placeholder="—"
+                    oninput="trackChange(${ei},${si})" data-changed="1">
+            </div>
+            <input class="set-inp" type="text" id="r${ei}_${si}"
+                value="${reps}" placeholder="—"
+                oninput="trackChange(${ei},${si})" data-changed="1">
+            <button class="set-check" id="chk${ei}_${si}" onclick="checkSet(${ei},${si})">✓</button>
+            <button type="button" onclick="removeSetRow(${ei},${si},this)"
+                style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.85rem;padding:0;">✕</button>
+        </div>`;
+    }
+
+    // Add exercise card
+    const detail = document.getElementById('detailScreen').querySelector('div');
+    const card = document.createElement('div');
+    card.className = 'ex-card';
+    card.id = 'ex' + ei;
+    card.innerHTML = `
+        <div class="ex-hero">
+            <div class="ex-title">${name}</div>
+            <div class="ex-badges">
+                <span class="badge badge-muted">${sets} séries</span>
+                <span class="badge badge-muted">${reps} reps</span>
+            </div>
+        </div>
+        <div class="sets-card">
+            <div class="sets-head" style="grid-template-columns:28px 1fr 1fr 36px 24px;">
+                <span>#</span><span>Kg</span><span>Reps</span><span>✓</span><span></span>
+            </div>
+            <div id="setsBody${ei}">${setRows}</div>
+            <button class="add-set-btn" onclick="addSet(${ei})">+ Adicionar série</button>
+        </div>
+        <button class="ok-btn" onclick="saveAndReturn(${ei})">✓ OK — Retornar aos exercícios</button>`;
+    detail.appendChild(card);
+
+    closeAddEx();
+    openExercise(ei);
+}
+
 function openFinish()  { document.getElementById('finishModal').classList.add('active'); }
 function closeFinish() { document.getElementById('finishModal').classList.remove('active'); }
 
