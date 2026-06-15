@@ -1,14 +1,15 @@
+<!-- FITTRACK-LIVE-v7-20260612-1140 -->
 {% extends 'base.html' %}
 {% block title %}Treino ao Vivo{% endblock %}
 
 {% block topbar %}
 <div class="topbar">
-    <a href="#" class="topbar-back" onclick="exitWorkout()">✕</a>
+    <a href="#" class="topbar-back" onclick="goBackOrExit()">←</a>
     <div style="flex:1; text-align:center;">
         <div style="font-size:0.56rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Ao vivo</div>
         <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px;">{{ plan_name }}</h1>
     </div>
-    <div id="clock" style="font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--text2); min-width:58px; text-align:right; letter-spacing:1px;">00:00</div>
+    <div id="timer" style="font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--red); min-width:72px; text-align:right; letter-spacing:1px;">00:00:00</div>
 </div>
 {% endblock %}
 
@@ -182,7 +183,7 @@
                                 id="r{{ ei }}_{{ si }}"
                                 value="{{ s.reps }}" placeholder="—"
                                 oninput="trackChange({{ ei }}, {{ si }})">
-                            <button class="set-check" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
+                            <button class="set-check" id="chk{{ ei }}_{{ si }}" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
                             <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
                                 style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
                         </div>
@@ -204,7 +205,7 @@
                                 id="r{{ ei }}_{{ si }}"
                                 value="{{ ex.reps }}" placeholder="—"
                                 oninput="trackChange({{ ei }}, {{ si }})">
-                            <button class="set-check" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
+                            <button class="set-check" id="chk{{ ei }}_{{ si }}" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
                             <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
                                 style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
                         </div>
@@ -334,13 +335,19 @@ const groupIdsForSession = {{ group_ids_for_session|tojson }};
 // Track which set inputs user actually changed
 const changed = {}; // "ei_si" -> true
 
-// Clock
-function updateClock() {
-    const n = new Date();
-    document.getElementById('clock').textContent =
-        String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+// Elapsed timer with seconds
+const t0 = Date.now();
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - t0) / 1000);
+    const h = Math.floor(elapsed / 3600);
+    const m = Math.floor((elapsed % 3600) / 60);
+    const s = elapsed % 60;
+    document.getElementById('timer').textContent =
+        (h > 0 ? String(h).padStart(2,'0') + ':' : '') +
+        String(m).padStart(2,'0') + ':' +
+        String(s).padStart(2,'0');
 }
-updateClock(); setInterval(updateClock, 10000);
+updateTimer(); setInterval(updateTimer, 1000);
 
 // Screen switching
 function showOverview() {
@@ -360,42 +367,59 @@ function openExercise(idx) {
 // Track field changes
 function trackChange(ei, si) {
     changed[ei+'_'+si] = true;
+    // Also mark dataset.changed on the inputs
+    const wEl = document.getElementById('w'+ei+'_'+si);
+    const rEl = document.getElementById('r'+ei+'_'+si);
+    if (wEl) wEl.dataset.changed = '1';
+    if (rEl) rEl.dataset.changed = '1';
 }
 
 // Check set ✓
 function checkSet(ei, si) {
-    const btn = document.querySelector('#sr'+ei+'_'+si+' .set-check');
     const row = document.getElementById('sr'+ei+'_'+si);
+    if (!row) return;
+    const btn = document.getElementById('chk'+ei+'_'+si) || row.querySelector('.set-check');
+    if (!btn) return;
     btn.classList.toggle('done');
     row.classList.toggle('done-row');
 }
 
 // Add new set row dynamically
+const setCounters = {}; // per-exercise counter to avoid ID collisions
 function addSet(ei) {
     const body = document.getElementById('setsBody'+ei);
     const rows = body.querySelectorAll('.set-row');
-    const si = rows.length;
-    const lastW = document.getElementById('w'+ei+'_'+(si-1))?.value || '';
-    const lastR = document.getElementById('r'+ei+'_'+(si-1))?.value || '';
+    // Use a unique ever-increasing counter to avoid ID collisions after removes
+    if (!setCounters[ei]) setCounters[ei] = rows.length;
+    const si = setCounters[ei]++;
+    const displayNum = rows.length + 1;
+    // Get last weight/reps from last visible row
+    const lastRow = rows[rows.length - 1];
+    const lastW = lastRow ? lastRow.querySelector('input[type="number"]')?.value || '' : '';
+    const lastR = lastRow ? lastRow.querySelector('input[type="text"]')?.value || '' : '';
     const div = document.createElement('div');
     div.className = 'set-row';
     div.id = 'sr'+ei+'_'+si;
+    div.style.gridTemplateColumns = '28px 1fr 1fr 36px 24px';
     div.innerHTML = `
-        <div class="set-num">${si+1}</div>
+        <div class="set-num">${displayNum}</div>
         <div class="set-inp-wrap">
             <input class="set-inp" type="number" step="0.5" min="0"
                 id="w${ei}_${si}" value="${lastW}" placeholder="—"
-                oninput="trackChange(${ei}, ${si})">
+                oninput="trackChange(${ei}, ${si})" data-changed="1">
         </div>
         <input class="set-inp" type="text"
             id="r${ei}_${si}" value="${lastR}" placeholder="—"
-            oninput="trackChange(${ei}, ${si})">
-        <button class="set-check" onclick="checkSet(${ei}, ${si})">✓</button>
+            oninput="trackChange(${ei}, ${si})" data-changed="1">
+        <button class="set-check" id="chk${ei}_${si}"
+            onclick="checkSet(${ei}, ${si})">✓</button>
         <button type="button" onclick="removeSetRow(${ei}, ${si}, this)"
-            style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
+            style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.85rem;padding:0;">✕</button>
     `;
     body.appendChild(div);
     changed[ei+'_'+si] = true;
+    // Renumber all visible rows
+    body.querySelectorAll('.set-num').forEach((el,i) => el.textContent = i+1);
 }
 
 function removeSetRow(ei, si, btn) {
@@ -414,10 +438,14 @@ function collectSets(ei) {
     const rows = document.querySelectorAll('[id^="sr'+ei+'_"]');
     const sets = [];
     rows.forEach((_, si) => {
-        const w = document.getElementById('w'+ei+'_'+si)?.value?.trim() || '';
-        const r = document.getElementById('r'+ei+'_'+si)?.value?.trim() || '';
-        const isChanged = changed[ei+'_'+si];
-        if (r && isChanged) {
+        const wEl = document.getElementById('w'+ei+'_'+si);
+        const rEl = document.getElementById('r'+ei+'_'+si);
+        const w = wEl?.value?.trim() || '';
+        const r = rEl?.value?.trim() || '';
+        const wChanged = wEl?.dataset.changed === '1';
+        const rChanged = rEl?.dataset.changed === '1';
+        // Only save if user explicitly changed weight OR reps, AND reps is filled
+        if (r && (wChanged || rChanged)) {
             sets.push({ weight: w ? parseFloat(w) : null, reps: r });
         }
     });
