@@ -57,7 +57,21 @@ def detail(session_id):
     session = WorkoutSession.query.filter_by(
         id=session_id, user_id=current_user.id).first_or_404()
     groups = MuscleGroup.query.all()
-    return render_template('history/detail.html', session=session, all_groups=groups)
+
+    # Group session_exercises by exercise_id — each group = one exercise card
+    from collections import OrderedDict
+    grouped = OrderedDict()
+    for se in session.session_exercises:
+        eid = se.exercise_id
+        if eid not in grouped:
+            grouped[eid] = {'exercise': se.exercise, 'sets': []}
+        grouped[eid]['sets'].append(se)
+    exercise_groups = list(grouped.values())
+
+    return render_template('history/detail.html',
+                           session=session,
+                           all_groups=groups,
+                           exercise_groups=exercise_groups)
 
 
 @history_bp.route('/history/<int:session_id>/edit', methods=['POST'])
@@ -245,16 +259,27 @@ def save_exercise_realtime():
             id=int(session_id), user_id=current_user.id).first()
 
     if not ws:
-        ws = WorkoutSession(
+        today = _today_brazil()
+        pid = int(plan_id_fs) if plan_id_fs else None
+        # Reuse existing session for same plan+day (user re-entering same workout)
+        existing = WorkoutSession.query.filter_by(
             user_id=current_user.id,
-            plan_id=int(plan_id_fs) if plan_id_fs else None,
-            date=_today_brazil(),
-        )
-        db.session.add(ws)
-        db.session.flush()
-        if group_ids_fs:
-            _attach_muscle_groups(ws, [int(g) for g in group_ids_fs])
-        db.session.commit()
+            plan_id=pid,
+            date=today
+        ).first()
+        if existing:
+            ws = existing
+        else:
+            ws = WorkoutSession(
+                user_id=current_user.id,
+                plan_id=pid,
+                date=today,
+            )
+            db.session.add(ws)
+            db.session.flush()
+            if group_ids_fs:
+                _attach_muscle_groups(ws, [int(g) for g in group_ids_fs])
+            db.session.commit()
 
     # Validate: at least one set with reps
     valid_sets = []
