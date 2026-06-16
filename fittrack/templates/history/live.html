@@ -1,674 +1,327 @@
-<!-- FITTRACK-LIVE-v7-20260612-1140 -->
 {% extends 'base.html' %}
-{% block title %}Treino ao Vivo{% endblock %}
+{% block title %}Começar Treino{% endblock %}
 
 {% block topbar %}
 <div class="topbar">
-    <a href="#" class="topbar-back" onclick="goBackOrExit()">←</a>
-    <div style="flex:1; text-align:center;">
-        <div style="font-size:0.56rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Ao vivo</div>
-        <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px;">{{ plan_name }}</h1>
-    </div>
-    <div id="timer" style="font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--red); min-width:72px; text-align:right; letter-spacing:1px;">00:00:00</div>
+    <a href="{{ url_for('main.dashboard') }}" class="topbar-back">←</a>
+    <h1>Treinar</h1>
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-/* Overview grid */
-#overviewScreen { padding:16px; max-width:480px; margin:0 auto; padding-bottom:32px; }
-.ov-label { font-size:0.62rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
-.ex-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.ex-grid-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:13px 11px; cursor:pointer; transition:all 0.15s; position:relative; }
-.ex-grid-card:active { transform:scale(0.96); }
-.ex-grid-card.has-data { border-color:var(--red); background:rgba(232,25,44,0.06); }
-.ex-grid-card.has-data::after { content:'✓'; position:absolute; top:8px; right:10px; font-family:'Bebas Neue',sans-serif; font-size:0.85rem; color:var(--red); }
-.gc-name { font-weight:700; font-size:0.82rem; line-height:1.3; margin-bottom:3px; }
-.gc-meta { font-size:0.66rem; color:var(--text2); }
-.gc-group { font-size:0.62rem; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.mode-card { background:var(--bg3); border:1px solid var(--border); border-radius:13px; padding:15px 17px; margin-bottom:10px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:all 0.15s; color:var(--text); text-decoration:none; }
+.mode-card:active { transform:scale(0.98); }
+.mode-card.active { border-color:var(--red); background:var(--red-glow); }
+.mode-icon { width:42px; height:42px; background:var(--bg4); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; border:1px solid var(--border); }
+.mode-title { font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.4px; margin-bottom:2px; }
+.mode-sub { font-size:0.7rem; color:var(--text2); }
 
-/* Detail screen */
-#detailScreen { display:none; }
-.ex-nav { display:flex; gap:5px; padding:8px 16px; overflow-x:auto; background:var(--bg2); border-bottom:1px solid var(--border); scrollbar-width:none; }
-.ex-nav::-webkit-scrollbar { display:none; }
-.ex-dot { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:var(--bg4); border:1.5px solid var(--border2); font-family:'Bebas Neue',sans-serif; font-size:0.85rem; color:var(--text3); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
-.ex-dot.active { background:var(--bg3); border-color:var(--text2); color:var(--text); }
-.ex-dot.has-data { background:var(--red); border-color:var(--red); color:white; }
+/* Plan cards */
+.plan-sel { background:var(--bg3); border:1px solid var(--border); border-radius:12px; margin-bottom:8px; overflow:hidden; }
+.plan-sel-header { display:flex; align-items:center; gap:10px; padding:13px 15px; cursor:pointer; }
+.plan-sel-name { font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.4px; flex:1; }
+.plan-sel-meta { font-size:0.68rem; color:var(--text2); display:flex; gap:4px; flex-wrap:wrap; margin-top:2px; }
+.plan-tag { background:var(--bg4); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:0.6rem; color:var(--text2); }
+.start-inline { background:var(--red); color:white; border:none; border-radius:7px; padding:9px 14px; font-family:'Bebas Neue',sans-serif; font-size:0.88rem; cursor:pointer; flex-shrink:0; text-decoration:none; display:inline-flex; }
 
-.ex-card { display:none; }
-.ex-card.active { display:block; }
+/* Exercise preview */
+.ex-prev-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0 15px 13px; }
+.ex-prev-card { background:var(--bg4); border:1px solid var(--border); border-radius:9px; padding:10px; }
+.ep-group { font-size:0.56rem; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
+.ep-name { font-weight:700; font-size:0.78rem; line-height:1.3; margin-bottom:3px; }
+.ep-meta { font-size:0.64rem; color:var(--text2); }
 
-.ex-hero { background:var(--bg3); border:1px solid var(--border); border-radius:13px; padding:16px; margin-bottom:10px; }
-.ex-group-lbl { font-size:0.58rem; color:var(--red); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
-.ex-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.5px; line-height:1.1; margin-bottom:8px; }
-.ex-badges { display:flex; gap:5px; flex-wrap:wrap; }
-
-/* Sets */
-.sets-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:10px; }
-.sets-head { display:grid; grid-template-columns:28px 1fr 1fr 36px; gap:4px; padding:7px 12px; background:var(--bg4); border-bottom:1px solid var(--border); }
-.sets-head span { font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; text-align:center; }
-.set-row { display:grid; grid-template-columns:28px 1fr 1fr 36px 24px; gap:4px; padding:7px 12px; border-bottom:1px solid var(--border); align-items:center; }
-.set-row:last-child { border-bottom:none; }
-.set-row.done-row { background:rgba(232,25,44,0.04); }
-.set-num { font-family:'Bebas Neue',sans-serif; font-size:0.88rem; color:var(--text3); text-align:center; }
-.set-inp-wrap { position:relative; }
-.set-inp { background:var(--bg4); border:1px solid var(--border2); border-radius:7px; color:var(--text); font-size:0.9rem; font-weight:700; text-align:center; padding:8px 3px; width:100%; outline:none; transition:border-color 0.15s; }
-.set-inp:focus { border-color:var(--red); }
-.suggest-lbl { position:absolute; bottom:-13px; left:0; right:0; text-align:center; font-size:0.5rem; color:var(--text3); white-space:nowrap; font-style:italic; }
-.set-check { background:var(--bg4); border:1px solid var(--border2); border-radius:7px; color:var(--text3); font-size:0.9rem; padding:7px 0; cursor:pointer; width:100%; transition:all 0.15s; display:flex; align-items:center; justify-content:center; }
-.set-check.done { background:rgba(232,25,44,0.1); border-color:rgba(232,25,44,0.3); color:var(--red); }
-.add-set-btn { display:flex; align-items:center; justify-content:center; gap:6px; padding:8px; background:var(--bg4); color:var(--text2); font-size:0.76rem; font-weight:700; border:none; cursor:pointer; width:100%; text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid var(--border); transition:all 0.15s; }
-.add-set-btn:hover { color:var(--red); }
-
-/* History table */
-.hist-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:10px; }
-.hist-card-head { padding:10px 14px; background:var(--bg4); border-bottom:1px solid var(--border); font-size:0.6rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
-.hist-table { width:100%; border-collapse:collapse; }
-.hist-table th { font-size:0.56rem; font-weight:700; color:var(--text3); text-transform:uppercase; padding:4px 8px; text-align:center; border-bottom:1px solid var(--border); }
-.hist-table td { font-size:0.78rem; padding:7px 8px; text-align:center; border-bottom:1px solid var(--border); }
-.hist-table tr:last-child td { border-bottom:none; }
-.hist-table td.d { color:var(--text2); font-size:0.7rem; text-align:left; padding-left:12px; }
-.hist-table td.w { font-family:'Bebas Neue',sans-serif; font-size:0.92rem; color:var(--red); }
-
-/* Coach notes */
-.coach-notes { background:rgba(232,25,44,0.05); border-left:2px solid var(--red); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:10px; font-size:0.8rem; color:var(--text2); line-height:1.5; }
-.coach-notes-lbl { font-size:0.56rem; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; }
-
-/* OK button */
-.ok-btn { width:100%; padding:14px; background:rgba(48,209,88,0.1); border:1.5px solid rgba(48,209,88,0.3); color:var(--success); border-radius:11px; font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px; cursor:pointer; margin-bottom:10px; transition:all 0.15s; }
-.ok-btn:active { transform:scale(0.98); }
-
-/* Add exercise panel */
-.add-ex-panel { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:250; flex-direction:column; overflow-y:auto; }
-.add-ex-panel.active { display:flex; }
-.add-ex-inner { background:var(--bg2); border-radius:18px 18px 0 0; padding:20px 18px 48px; margin-top:auto; border-top:1px solid var(--border); max-height:85vh; overflow-y:auto; }
-.add-ex-title { font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:0.5px; margin-bottom:14px; }
-.ex-search-list { background:var(--bg3); border:1px solid var(--border); border-radius:10px; overflow:hidden; max-height:220px; overflow-y:auto; margin-bottom:12px; }
-.ex-search-item { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s; }
-.ex-search-item:last-child { border-bottom:none; }
-.ex-search-item:active { background:var(--bg4); }
-.ex-search-item.sel { background:var(--red-glow); }
-.ex-search-name { flex:1; font-weight:600; font-size:0.84rem; }
-.ex-sel-dot { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--border2); flex-shrink:0; }
-.ex-search-item.sel .ex-sel-dot { background:var(--red); border-color:var(--red); }
-
-/* Finish modal */
-.finish-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:300; flex-direction:column; overflow-y:auto; }
-.finish-modal.active { display:flex; }
-.finish-inner { background:var(--bg2); border-radius:18px 18px 0 0; padding:24px 20px 48px; margin-top:auto; border-top:1px solid var(--border); }
-.group-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
-.group-chip { display:inline-flex; align-items:center; gap:4px; background:var(--bg4); border:1.5px solid var(--border); border-radius:8px; padding:7px 11px; cursor:pointer; transition:all 0.15s; font-weight:700; font-size:0.74rem; color:var(--text2); user-select:none; text-transform:uppercase; letter-spacing:0.3px; }
-.group-chip.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
+/* Group grid */
+.group-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+.group-tile { background:var(--bg3); border:1.5px solid var(--border); border-radius:10px; padding:12px 5px; text-align:center; cursor:pointer; transition:all 0.15s; font-size:0.7rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; }
+.group-tile.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="content">
 
-<!-- SCREEN 1: Overview -->
-<div id="overviewScreen">
-    {% if is_resuming %}
-    <div style="background:rgba(255,107,43,0.1); border:1px solid rgba(255,107,43,0.3); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:0.78rem; color:var(--orange); font-weight:600;">
-        ↩ Retomando treino de hoje — exercícios em vermelho já foram registrados
+    <div class="section-header" style="margin-bottom:12px;">
+        <span class="section-title">Como quer treinar?</span>
     </div>
-    {% endif %}
-    <div class="ov-label">Selecione o exercício</div>
-    <div class="ex-grid" id="exGrid">
-        {% for ex in exercises %}
-        <div class="ex-grid-card" id="gc{{ loop.index0 }}" onclick="openExercise({{ loop.index0 }})">
-            <div class="gc-group">{{ ex.muscle_group.name }}</div>
-            <div class="gc-name">{{ ex.name }}</div>
-            <div class="gc-meta">{{ ex.sets }}× {{ ex.reps }}</div>
+
+    <div onclick="selectMode('plan')" id="modePlan" class="mode-card">
+        <div class="mode-icon">▣</div>
+        <div>
+            <div class="mode-title">Com Plano</div>
+            <div class="mode-sub">Plano pré-formulado com séries e cargas</div>
         </div>
-        {% endfor %}
     </div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px;">
-        <button onclick="openAddEx()" class="btn btn-ghost"
-            style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
-            + Exercício avulso
-        </button>
-        <button onclick="openFinish()" class="btn btn-red"
-            style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
-            Finalizar
-        </button>
-    </div>
-</div>
-
-<!-- SCREEN 2: Exercise detail -->
-<div id="detailScreen">
-    <div class="ex-nav" id="exNav">
-        {% for ex in exercises %}
-        <div class="ex-dot" id="dot{{ loop.index0 }}" onclick="openExercise({{ loop.index0 }})">{{ loop.index }}</div>
-        {% endfor %}
+    <div onclick="selectMode('free')" id="modeFree" class="mode-card">
+        <div class="mode-icon">◈</div>
+        <div>
+            <div class="mode-title">Treino Avulso</div>
+            <div class="mode-sub">Escolha grupos e exercícios livremente</div>
+        </div>
     </div>
 
-    <div style="padding:12px 16px 80px; max-width:480px; margin:0 auto;">
-        {% for ex in exercises %}
-        <div class="ex-card" id="ex{{ loop.index0 }}">
-
-            <div class="ex-hero">
-                <div class="ex-group-lbl">{{ ex.muscle_group.name }}</div>
-                <div class="ex-title">{{ ex.name }}</div>
-                <div class="ex-badges">
-                    <span class="badge badge-muted">{{ ex.sets }} séries</span>
-                    <span class="badge badge-muted">{{ ex.reps }} reps</span>
-                    {% if ex.weight %}<span class="badge badge-red">{{ ex.weight }}kg</span>{% endif %}
-                </div>
-            </div>
-
-            {% if ex.coach_notes %}
-            <div class="coach-notes">
-                <div class="coach-notes-lbl">Instruções</div>
-                {{ ex.coach_notes }}
-            </div>
-            {% endif %}
-
-            <!-- Dynamic sets table -->
-            <div class="sets-card">
-                <div class="sets-head" style="grid-template-columns:28px 1fr 1fr 36px 28px;">
-                    <span>#</span><span>Kg</span><span>Reps</span><span>✓</span><span></span>
-                </div>
-                <div id="setsBody{{ loop.index0 }}">
-                    {% set ei = loop.index0 %}
-                    {% if ex.series_data %}
-                        {% set series = ex.series_data | fromjson %}
-                        {% for s in series %}
-                        {% set si = loop.index0 %}
-                        <div class="set-row" id="sr{{ ei }}_{{ si }}">
-                            <div class="set-num">{{ si + 1 }}</div>
-                            <div class="set-inp-wrap">
-                                <input class="set-inp" type="number" step="0.5" min="0"
-                                    id="w{{ ei }}_{{ si }}"
-                                    value="{{ ex.weight or '' }}" placeholder="—"
-                                    oninput="trackChange({{ ei }}, {{ si }})">
-                                {% if ex.suggest_increase and si == 0 %}
-                                <div class="suggest-lbl">cogite aumentar peso</div>
-                                {% endif %}
-                            </div>
-                            <input class="set-inp" type="text"
-                                id="r{{ ei }}_{{ si }}"
-                                value="{{ s.reps }}" placeholder="—"
-                                oninput="trackChange({{ ei }}, {{ si }})">
-                            <button class="set-check" id="chk{{ ei }}_{{ si }}" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
-                            <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
-                                style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
+    <!-- Plan section -->
+    <div id="planSection" style="display:none; margin-top:20px;">
+        <div class="section-header" style="margin-bottom:10px;">
+            <span class="section-title">Escolha o plano</span>
+        </div>
+        {% if plans %}
+            {% for plan in plans %}
+            <div class="plan-sel" id="planCard{{ plan.id }}">
+                <div class="plan-sel-header">
+                    <div style="flex:1; cursor:pointer;" onclick="togglePreview({{ plan.id }})">
+                        <div class="plan-sel-name">{{ plan.name }}</div>
+                        <div class="plan-sel-meta">
+                            <span class="plan-tag">{{ plan.plan_exercises|length }} exerc.</span>
+                            {% for g in plan.muscle_groups %}<span class="plan-tag">{{ g.name }}</span>{% endfor %}
                         </div>
-                        {% endfor %}
+                    </div>
+                    {% if plan.id in today_sessions %}
+                    <a href="/live/{{ plan.id }}" class="start-inline"
+                       style="background:var(--orange);">↩ Reiniciar</a>
                     {% else %}
-                        {% for si in range(ex.sets) %}
-                        <div class="set-row" id="sr{{ ei }}_{{ si }}">
-                            <div class="set-num">{{ si + 1 }}</div>
-                            <div class="set-inp-wrap">
-                                <input class="set-inp" type="number" step="0.5" min="0"
-                                    id="w{{ ei }}_{{ si }}"
-                                    value="{{ ex.weight or '' }}" placeholder="—"
-                                    oninput="trackChange({{ ei }}, {{ si }})">
-                                {% if ex.suggest_increase and si == 0 %}
-                                <div class="suggest-lbl">cogite aumentar peso</div>
-                                {% endif %}
-                            </div>
-                            <input class="set-inp" type="text"
-                                id="r{{ ei }}_{{ si }}"
-                                value="{{ ex.reps }}" placeholder="—"
-                                oninput="trackChange({{ ei }}, {{ si }})">
-                            <button class="set-check" id="chk{{ ei }}_{{ si }}" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
-                            <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
-                                style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
-                        </div>
-                        {% endfor %}
+                    <a href="/live/{{ plan.id }}" class="start-inline">Iniciar</a>
                     {% endif %}
                 </div>
-                <button class="add-set-btn" onclick="addSet({{ loop.index0 }})">+ Adicionar série</button>
-            </div>
-
-            <!-- History -->
-            {% if ex.history %}
-            <div class="hist-card">
-                <div class="hist-card-head">Histórico</div>
-                <table class="hist-table">
-                    <thead><tr><th style="text-align:left; padding-left:12px;">Data</th><th>Kg</th><th>Reps</th></tr></thead>
-                    <tbody>
-                        {% set seen = namespace(dates=[]) %}
-                        {% for h in ex.history | reverse %}
-                        {% set ds = h.session.date.strftime('%d/%m/%y') %}
-                        <tr>
-                            <td class="d">{% if ds not in seen.dates %}{{ ds }}{% set _ = seen.dates.append(ds) %}{% endif %}</td>
-                            <td class="w">{{ h.weight_kg or '—' }}{% if h.weight_kg %}kg{% endif %}</td>
-                            <td>{{ h.reps_done or '—' }}</td>
-                        </tr>
+                <div id="prev{{ plan.id }}" style="display:none;">
+                    <div class="ex-prev-grid">
+                        {% for pe in plan.plan_exercises | sort(attribute='order') %}
+                        <div class="ex-prev-card">
+                            <div class="ep-group">{{ pe.exercise.muscle_group.name }}</div>
+                            <div class="ep-name">{{ pe.exercise.name }}</div>
+                            <div class="ep-meta">{{ pe.sets }}× {{ pe.reps }}</div>
+                        </div>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% endif %}
-
-            <button class="ok-btn" onclick="saveAndReturn({{ loop.index0 }})">
-                ✓ OK — Retornar aos exercícios
-            </button>
-
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-
-
-<!-- Add exercise panel -->
-<div class="add-ex-panel" id="addExPanel">
-    <div class="add-ex-inner">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-            <div class="add-ex-title">Adicionar Exercício</div>
-            <button onclick="closeAddEx()" style="background:none; border:none; color:var(--text2); font-size:1.3rem; cursor:pointer;">✕</button>
-        </div>
-        <div class="form-group" style="margin-bottom:10px;">
-            <label class="form-label">Grupo muscular</label>
-            <select id="addExGroup" class="form-control" onchange="loadAddExList()">
-                {% for g in all_groups %}
-                <option value="{{ g.id }}">{{ g.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group" style="margin-bottom:10px;">
-            <label class="form-label">Exercício</label>
-            <div class="ex-search-list" id="addExList">
-                <div style="padding:12px 14px; color:var(--text2); font-size:0.8rem;">Selecione um grupo acima</div>
-            </div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
-            <div>
-                <label class="form-label">Séries</label>
-                <input type="number" id="addExSets" class="form-control" value="3" min="1" max="20">
-            </div>
-            <div>
-                <label class="form-label">Reps</label>
-                <input type="text" id="addExReps" class="form-control" value="10-12">
-            </div>
-        </div>
-        <button onclick="confirmAddEx()" class="btn btn-red btn-block"
-            style="font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:0.5px;">
-            + Adicionar ao treino
-        </button>
-    </div>
-</div>
-
-<!-- Submit form -->
-<form method="POST" action="{{ url_for('history.save_live') }}" id="finishForm" style="display:none;">
-    <input type="hidden" name="session_id" id="formSessionId" value="{{ session_id }}">
-    <input type="hidden" name="plan_id" value="{{ plan_id or '' }}">
-    <input type="hidden" name="duration" id="finalDuration">
-    <input type="hidden" name="custom_name" id="finalName">
-    <input type="hidden" name="exercise_data" id="exerciseData">
-    <input type="hidden" name="exercise_ids_json" value="{{ exercise_ids_json|safe }}">
-    <div id="groupInputs"></div>
-</form>
-
-<!-- Finish modal -->
-<div class="finish-modal" id="finishModal">
-    <div class="finish-inner">
-        <div style="font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:1px; margin-bottom:4px;">Finalizar Treino</div>
-        <div style="font-size:0.76rem; color:var(--text2); margin-bottom:18px;">Revise antes de salvar</div>
-        <div class="form-group">
-            <label class="form-label">Nome do treino (opcional)</label>
-            <input type="text" id="customName" class="form-control"
-                placeholder="{{ plan_name }}"
-                value="{{ plan_name if plan_name != 'Treino Avulso' else '' }}">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Grupos musculares treinados</label>
-            <div class="group-chips">
-                {% for g in all_groups %}
-                <div class="group-chip {% if g.id in selected_group_ids %}sel{% endif %}"
-                     data-id="{{ g.id }}" onclick="this.classList.toggle('sel')">
-                    {{ g.name }}
+                    </div>
                 </div>
-                {% endfor %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="text-align:center; padding:24px; color:var(--text2);">
+                <div style="font-size:0.82rem; margin-bottom:12px;">Nenhum plano criado</div>
+                <a href="{{ url_for('workouts.index') }}" class="btn btn-red btn-sm">Criar plano</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Free section -->
+    <div id="freeSection" style="display:none; margin-top:20px;">
+        <div class="section-header" style="margin-bottom:10px;">
+            <span class="section-title">Grupos musculares</span>
+        </div>
+        <div class="group-grid-3" style="margin-bottom:14px;">
+            {% for group in groups %}
+            <div class="group-tile" data-id="{{ group.id }}" data-name="{{ group.name }}"
+                 onclick="toggleGroup({{ group.id }}, '{{ group.name }}', this)">
+                {{ group.name }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Exercise list per group (shown after selection) -->
+        <div id="exSection" style="display:none;">
+            <div class="tab-row" style="display:flex; background:var(--bg3); border-radius:50px; padding:3px; margin-bottom:14px;">
+                <button class="tab-btn on" id="tabExLib" onclick="showExTab('lib')" style="flex:1; padding:8px; border:none; border-radius:50px; background:var(--red); color:white; font-weight:700; font-size:0.75rem; cursor:pointer; text-transform:uppercase;">Exercícios</button>
+                <button class="tab-btn" id="tabExCustom" onclick="showExTab('custom')" style="flex:1; padding:8px; border:none; border-radius:50px; background:transparent; color:var(--text2); font-weight:700; font-size:0.75rem; cursor:pointer; text-transform:uppercase;">Personalizado</button>
+            </div>
+
+            <!-- Library tab -->
+            <div id="exLibView">
+                <div id="exListContainer" style="background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:12px;">
+                    <div style="padding:12px 14px; font-size:0.78rem; color:var(--text2);">Selecione um grupo acima</div>
+                </div>
+                <button onclick="startFreeWithSel()" id="btnStartFree" disabled class="btn btn-red btn-block"
+                    style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+                    Iniciar com selecionados
+                </button>
+            </div>
+
+            <!-- Custom tab -->
+            <div id="exCustomView" style="display:none;">
+                <div style="background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px;">
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label class="form-label">Nome do exercício</label>
+                        <input type="text" id="customExName" class="form-control" placeholder="Ex: Supino 45 graus">
+                    </div>
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label class="form-label">Grupo muscular</label>
+                        <select id="customExGroup" class="form-control">
+                            {% for group in groups %}
+                            <option value="{{ group.id }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="customSets">
+                        <div class="form-label" style="margin-bottom:6px;">Séries</div>
+                        <div id="setsList"></div>
+                    </div>
+                    <button onclick="addCustomSet()" class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;">
+                        + Adicionar série
+                    </button>
+                </div>
+                <button onclick="addCustomExercise()" class="btn btn-red btn-block"
+                    style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+                    Adicionar exercício personalizado
+                </button>
+                <div id="customExList" style="margin-top:12px;"></div>
+                <button onclick="startCustom()" id="btnStartCustom" style="display:none; margin-top:8px;" class="btn btn-success btn-block"
+                    style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem;">
+                    Iniciar treino personalizado
+                </button>
             </div>
         </div>
-        <div style="display:flex; gap:8px; margin-top:18px;">
-            <button onclick="closeFinish()" class="btn btn-ghost" style="flex:1;">Continuar</button>
-            <button onclick="submitFinish()" class="btn btn-red" style="flex:1; font-family:'Bebas Neue',sans-serif; font-size:0.95rem;">Salvar</button>
-        </div>
     </div>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const exerciseIds        = {{ exercise_ids_json|safe }};
-let   sessionId          = '{{ session_id }}';
-const planIdForSession   = {{ plan_id_for_session or 'null' }};
-const groupIdsForSession = {{ group_ids_for_session|tojson }};
-const doneExerciseIds    = new Set({{ done_exercise_ids|tojson }});
-const isResuming         = {{ 'true' if is_resuming else 'false' }};
-// Track which set inputs user actually changed
-const changed = {}; // "ei_si" -> true
+// All exercises by group (from server)
+const exercisesByGroup = {
+    {% for group in groups %}
+    {{ group.id }}: [
+        {% for ex in group.exercises %}
+        { id: {{ ex.id }}, name: "{{ ex.name|replace('"', '\\"') }}" },
+        {% endfor %}
+    ],
+    {% endfor %}
+};
 
-// Elapsed timer with seconds
-const t0 = Date.now();
-function updateTimer() {
-    const elapsed = Math.floor((Date.now() - t0) / 1000);
-    const h = Math.floor(elapsed / 3600);
-    const m = Math.floor((elapsed % 3600) / 60);
-    const s = elapsed % 60;
-    document.getElementById('timer').textContent =
-        (h > 0 ? String(h).padStart(2,'0') + ':' : '') +
-        String(m).padStart(2,'0') + ':' +
-        String(s).padStart(2,'0');
-}
-updateTimer(); setInterval(updateTimer, 1000);
+let selectedGroups = [];
+let selectedExIds = new Set();
+let customExercises = []; // [{name, group_id, sets:[{weight,reps}]}]
+let customSetCount = 0;
 
-// Mark exercises already done (resuming session)
-if (isResuming) {
-    exerciseIds.forEach((exId, ei) => {
-        if (doneExerciseIds.has(exId)) {
-            const dot = document.getElementById('dot'+ei);
-            const gc  = document.getElementById('gc'+ei);
-            if (dot) dot.classList.add('has-data');
-            if (gc)  gc.classList.add('has-data');
-        }
-    });
+// Mode selection
+function selectMode(mode) {
+    document.getElementById('planSection').style.display = mode === 'plan' ? 'block' : 'none';
+    document.getElementById('freeSection').style.display = mode === 'free' ? 'block' : 'none';
+    document.getElementById('modePlan').classList.toggle('active', mode === 'plan');
+    document.getElementById('modeFree').classList.toggle('active', mode === 'free');
 }
 
-// Screen switching
-function showOverview() {
-    document.getElementById('overviewScreen').style.display = 'block';
-    document.getElementById('detailScreen').style.display = 'none';
-}
-function openExercise(idx) {
-    document.getElementById('overviewScreen').style.display = 'none';
-    document.getElementById('detailScreen').style.display = 'block';
-    document.querySelectorAll('.ex-dot').forEach(d => d.classList.remove('active'));
-    document.querySelectorAll('.ex-card').forEach(c => c.classList.remove('active'));
-    document.getElementById('dot'+idx).classList.add('active');
-    document.getElementById('ex'+idx).classList.add('active');
-    document.getElementById('dot'+idx).scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+// Plan preview
+function togglePreview(planId) {
+    const el = document.getElementById('prev'+planId);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-// Track field changes
-function trackChange(ei, si) {
-    changed[ei+'_'+si] = true;
-    // Also mark dataset.changed on the inputs
-    const wEl = document.getElementById('w'+ei+'_'+si);
-    const rEl = document.getElementById('r'+ei+'_'+si);
-    if (wEl) wEl.dataset.changed = '1';
-    if (rEl) rEl.dataset.changed = '1';
-}
-
-// Check set ✓
-function checkSet(ei, si) {
-    const row = document.getElementById('sr'+ei+'_'+si);
-    if (!row) return;
-    const btn = document.getElementById('chk'+ei+'_'+si) || row.querySelector('.set-check');
-    if (!btn) return;
-    btn.classList.toggle('done');
-    row.classList.toggle('done-row');
-}
-
-// Add new set row dynamically
-const setCounters = {}; // per-exercise counter to avoid ID collisions
-function addSet(ei) {
-    const body = document.getElementById('setsBody'+ei);
-    const rows = body.querySelectorAll('.set-row');
-    // Use a unique ever-increasing counter to avoid ID collisions after removes
-    if (!setCounters[ei]) setCounters[ei] = rows.length;
-    const si = setCounters[ei]++;
-    const displayNum = rows.length + 1;
-    // Get last weight/reps from last visible row
-    const lastRow = rows[rows.length - 1];
-    const lastW = lastRow ? lastRow.querySelector('input[type="number"]')?.value || '' : '';
-    const lastR = lastRow ? lastRow.querySelector('input[type="text"]')?.value || '' : '';
-    const div = document.createElement('div');
-    div.className = 'set-row';
-    div.id = 'sr'+ei+'_'+si;
-    div.style.gridTemplateColumns = '28px 1fr 1fr 36px 24px';
-    div.innerHTML = `
-        <div class="set-num">${displayNum}</div>
-        <div class="set-inp-wrap">
-            <input class="set-inp" type="number" step="0.5" min="0"
-                id="w${ei}_${si}" value="${lastW}" placeholder="—"
-                oninput="trackChange(${ei}, ${si})" data-changed="1">
-        </div>
-        <input class="set-inp" type="text"
-            id="r${ei}_${si}" value="${lastR}" placeholder="—"
-            oninput="trackChange(${ei}, ${si})" data-changed="1">
-        <button class="set-check" id="chk${ei}_${si}"
-            onclick="checkSet(${ei}, ${si})">✓</button>
-        <button type="button" onclick="removeSetRow(${ei}, ${si}, this)"
-            style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.85rem;padding:0;">✕</button>
-    `;
-    body.appendChild(div);
-    changed[ei+'_'+si] = true;
-    // Renumber all visible rows
-    body.querySelectorAll('.set-num').forEach((el,i) => el.textContent = i+1);
-}
-
-function removeSetRow(ei, si, btn) {
-    const body = document.getElementById('setsBody'+ei);
-    if (body.querySelectorAll('.set-row').length <= 1) return; // keep at least 1
-    const row = document.getElementById('sr'+ei+'_'+si) || btn.closest('.set-row');
-    if (row) row.remove();
-    // Renumber remaining rows
-    body.querySelectorAll('.set-row').forEach((r, i) => {
-        r.querySelector('.set-num').textContent = i + 1;
-    });
-}
-
-// Collect all sets for an exercise
-function collectSets(ei) {
-    const rows = document.querySelectorAll('[id^="sr'+ei+'_"]');
-    const sets = [];
-    rows.forEach((_, si) => {
-        const wEl = document.getElementById('w'+ei+'_'+si);
-        const rEl = document.getElementById('r'+ei+'_'+si);
-        const w = wEl?.value?.trim() || '';
-        const r = rEl?.value?.trim() || '';
-        const wChanged = wEl?.dataset.changed === '1';
-        const rChanged = rEl?.dataset.changed === '1';
-        // Only save if user explicitly changed weight OR reps, AND reps is filled
-        if (r && (wChanged || rChanged)) {
-            sets.push({ weight: w ? parseFloat(w) : null, reps: r });
-        }
-    });
-    return sets;
-}
-
-// Save exercise in real-time
-async function _saveExercise(ei) {
-    const exId = exerciseIds[ei];
-    if (!sessionId || !exId) return false;
-    const sets = collectSets(ei);
-    if (!sets.length) return false;
-    try {
-        const resp = await fetch('/live/save-exercise', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                session_id: sessionId,
-                exercise_id: exId,
-                sets,
-                plan_id_for_session: planIdForSession,
-                group_ids_for_session: groupIdsForSession
-            })
-        });
-        const data = await resp.json();
-        if (data.ok && data.session_id) {
-            sessionId = String(data.session_id); // Update from 'pending' to real ID
-        }
-        return data.ok === true;
-    } catch(e) { return false; }
-}
-
-async function saveAndReturn(ei) {
-    const saved = await _saveExercise(ei);
-    if (saved) {
-        document.getElementById('dot'+ei).classList.add('has-data');
-        const gc = document.getElementById('gc'+ei);
-        if (gc) gc.classList.add('has-data');
+// Group toggle
+function toggleGroup(id, name, el) {
+    el.classList.toggle('sel');
+    if (el.classList.contains('sel')) {
+        if (!selectedGroups.includes(id)) selectedGroups.push(id);
+    } else {
+        selectedGroups = selectedGroups.filter(g => g !== id);
     }
-    showOverview();
+    renderExList();
+    document.getElementById('exSection').style.display = selectedGroups.length > 0 ? 'block' : 'none';
 }
 
-// Exit
-async function exitWorkout() {
-    const hasSaved = document.querySelectorAll('.ex-dot.has-data').length > 0;
-    const msg = hasSaved ? 'Sair? Os exercícios marcados já foram salvos.' : 'Sair? Nenhum exercício registrado — treino será cancelado.';
-    if (!confirm(msg)) return;
-    if (sessionId && sessionId !== 'pending') {
-        try { await fetch('/live/cancel/' + sessionId, {method:'POST'}); } catch(e) {}
-    }
-    window.location.href = '{{ url_for("history.start") }}';
-}
-
-// Finish
-// ── Back button ───────────────────────────────────────────────────────────────
-function goBackOrExit() {
-    const detail = document.getElementById('detailScreen');
-    if (detail && detail.style.display === 'block') {
-        showOverview();
+// Render exercise list for selected groups
+function renderExList() {
+    const container = document.getElementById('exListContainer');
+    if (selectedGroups.length === 0) {
+        container.innerHTML = '<div style="padding:12px 14px; font-size:0.78rem; color:var(--text2);">Selecione um grupo acima</div>';
         return;
     }
-    const hasAny = document.querySelectorAll('.ex-dot.has-data').length > 0;
-    if (!confirm(hasAny ? 'Sair? Os exercícios marcados já foram salvos.' : 'Sair? Treino será cancelado.')) return;
-    if (sessionId && sessionId !== 'pending') {
-        fetch('/live/cancel/' + sessionId, {method:'POST'}).catch(()=>{});
-    }
-    window.location.href = '/start';
-}
-
-// ── Add exercise panel ─────────────────────────────────────────────────────────
-let addExSelectedId = null;
-
-function openAddEx() {
-    addExSelectedId = null;
-    document.getElementById('addExPanel').classList.add('active');
-    loadAddExList();
-}
-
-function closeAddEx() {
-    document.getElementById('addExPanel').classList.remove('active');
-    addExSelectedId = null;
-}
-
-async function loadAddExList() {
-    const gid = document.getElementById('addExGroup').value;
-    if (!gid) return;
-    const list = document.getElementById('addExList');
-    list.innerHTML = '<div style="padding:12px 14px;color:var(--text2);font-size:0.8rem;">Carregando...</div>';
-    try {
-        const resp = await fetch('/live/exercises-by-group/' + gid);
-        const exs = await resp.json();
-        if (!exs.length) {
-            list.innerHTML = '<div style="padding:12px 14px;color:var(--text2);font-size:0.8rem;">Nenhum exercício</div>';
-            return;
-        }
-        list.innerHTML = exs.map(ex => `
-            <div class="ex-search-item" id="addExItem${ex.id}"
-                 onclick="selectAddEx(${ex.id},'${ex.name.replace(/'/g,"\'").replace(/"/g,'\"')}')">
-                <div class="ex-search-name">${ex.name}</div>
-                <div class="ex-sel-dot"></div>
-            </div>`).join('');
-    } catch(e) {
-        list.innerHTML = '<div style="padding:12px 14px;color:var(--danger);font-size:0.8rem;">Erro ao carregar</div>';
-    }
-}
-
-function selectAddEx(id, name) {
-    document.querySelectorAll('.ex-search-item').forEach(el => el.classList.remove('sel'));
-    const el = document.getElementById('addExItem' + id);
-    if (el) el.classList.add('sel');
-    addExSelectedId = id;
-}
-
-function confirmAddEx() {
-    if (!addExSelectedId) { alert('Selecione um exercício'); return; }
-    const sets = parseInt(document.getElementById('addExSets').value) || 3;
-    const reps = document.getElementById('addExReps').value || '10-12';
-    const nameEl = document.querySelector('#addExItem' + addExSelectedId + ' .ex-search-name');
-    const name = nameEl ? nameEl.textContent : 'Exercício';
-
-    const ei = exerciseIds.length;
-    exerciseIds.push(addExSelectedId);
-    if (!setCounters[ei]) setCounters[ei] = sets;
-
-    // Add dot
-    const nav = document.getElementById('exNav');
-    const dot = document.createElement('div');
-    dot.className = 'ex-dot';
-    dot.id = 'dot' + ei;
-    dot.textContent = ei + 1;
-    dot.onclick = () => openExercise(ei);
-    nav.appendChild(dot);
-
-    // Add grid card
-    const grid = document.getElementById('exGrid');
-    const gc = document.createElement('div');
-    gc.className = 'ex-grid-card';
-    gc.id = 'gc' + ei;
-    gc.onclick = () => openExercise(ei);
-    gc.innerHTML = `<div class="gc-name">${name}</div><div class="gc-meta">${sets}× ${reps}</div>`;
-    grid.appendChild(gc);
-
-    // Build set rows
-    let setRows = '';
-    for (let si = 0; si < sets; si++) {
-        setRows += `<div class="set-row" id="sr${ei}_${si}" style="grid-template-columns:28px 1fr 1fr 36px 24px;">
-            <div class="set-num">${si+1}</div>
-            <div class="set-inp-wrap">
-                <input class="set-inp" type="number" step="0.5" min="0"
-                    id="w${ei}_${si}" placeholder="—"
-                    oninput="trackChange(${ei},${si})" data-changed="1">
-            </div>
-            <input class="set-inp" type="text" id="r${ei}_${si}"
-                value="${reps}" placeholder="—"
-                oninput="trackChange(${ei},${si})" data-changed="1">
-            <button class="set-check" id="chk${ei}_${si}" onclick="checkSet(${ei},${si})">✓</button>
-            <button type="button" onclick="removeSetRow(${ei},${si},this)"
-                style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.85rem;padding:0;">✕</button>
-        </div>`;
-    }
-
-    // Add exercise card
-    const detail = document.getElementById('detailScreen').querySelector('div');
-    const card = document.createElement('div');
-    card.className = 'ex-card';
-    card.id = 'ex' + ei;
-    card.innerHTML = `
-        <div class="ex-hero">
-            <div class="ex-title">${name}</div>
-            <div class="ex-badges">
-                <span class="badge badge-muted">${sets} séries</span>
-                <span class="badge badge-muted">${reps} reps</span>
-            </div>
-        </div>
-        <div class="sets-card">
-            <div class="sets-head" style="grid-template-columns:28px 1fr 1fr 36px 24px;">
-                <span>#</span><span>Kg</span><span>Reps</span><span>✓</span><span></span>
-            </div>
-            <div id="setsBody${ei}">${setRows}</div>
-            <button class="add-set-btn" onclick="addSet(${ei})">+ Adicionar série</button>
-        </div>
-        <button class="ok-btn" onclick="saveAndReturn(${ei})">✓ OK — Retornar aos exercícios</button>`;
-    detail.appendChild(card);
-
-    closeAddEx();
-    openExercise(ei);
-}
-
-function openFinish()  { document.getElementById('finishModal').classList.add('active'); }
-function closeFinish() { document.getElementById('finishModal').classList.remove('active'); }
-
-function submitFinish() {
-    document.getElementById('formSessionId').value = sessionId;
-    document.getElementById('finalDuration').value = '';
-    document.getElementById('finalName').value = document.getElementById('customName').value;
-    const gi = document.getElementById('groupInputs');
-    gi.innerHTML = '';
-    document.querySelectorAll('.group-chip.sel').forEach(chip => {
-        const inp = document.createElement('input');
-        inp.type='hidden'; inp.name='muscle_group_ids'; inp.value=chip.dataset.id;
-        gi.appendChild(inp);
+    let html = '';
+    selectedGroups.forEach(gid => {
+        const exs = exercisesByGroup[gid] || [];
+        exs.forEach(ex => {
+            const sel = selectedExIds.has(ex.id);
+            html += `<div class="ex-sel-row" id="exRow${ex.id}" onclick="toggleEx(${ex.id})"
+                style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; ${sel ? 'background:rgba(232,25,44,0.05);' : ''}">
+                <div style="flex:1; font-weight:600; font-size:0.84rem;">${ex.name}</div>
+                <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid ${sel ? 'var(--red)' : 'var(--border2)'}; background:${sel ? 'var(--red)' : 'transparent'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    ${sel ? '<span style="color:white; font-size:0.7rem; font-weight:700;">✓</span>' : ''}
+                </div>
+            </div>`;
+        });
     });
-    document.getElementById('exerciseData').value = '[]';
-    document.getElementById('finishForm').submit();
+    if (!html) html = '<div style="padding:12px 14px; font-size:0.78rem; color:var(--text2);">Nenhum exercício encontrado</div>';
+    container.innerHTML = html;
+    document.getElementById('btnStartFree').disabled = selectedExIds.size === 0 && selectedGroups.length === 0;
+}
+
+function toggleEx(id) {
+    if (selectedExIds.has(id)) selectedExIds.delete(id);
+    else selectedExIds.add(id);
+    renderExList();
+    document.getElementById('btnStartFree').disabled = selectedExIds.size === 0;
+}
+
+function startFreeWithSel() {
+    // If specific exercises selected, use custom route
+    // Otherwise use group-based route
+    if (selectedExIds.size > 0) {
+        // Build a free session with specific exercise IDs
+        // We'll pass as group IDs for now — simplest approach
+        window.location.href = '/live/free?groups=' + selectedGroups.join(',') + '&exids=' + [...selectedExIds].join(',');
+    } else {
+        window.location.href = '/live/free?groups=' + selectedGroups.join(',');
+    }
+}
+
+// Custom exercise
+function showExTab(tab) {
+    document.getElementById('exLibView').style.display = tab === 'lib' ? 'block' : 'none';
+    document.getElementById('exCustomView').style.display = tab === 'custom' ? 'block' : 'none';
+    document.getElementById('tabExLib').style.background = tab === 'lib' ? 'var(--red)' : 'transparent';
+    document.getElementById('tabExLib').style.color = tab === 'lib' ? 'white' : 'var(--text2)';
+    document.getElementById('tabExCustom').style.background = tab === 'custom' ? 'var(--red)' : 'transparent';
+    document.getElementById('tabExCustom').style.color = tab === 'custom' ? 'white' : 'var(--text2)';
+    if (tab === 'custom' && document.getElementById('setsList').children.length === 0) addCustomSet();
+}
+
+function addCustomSet() {
+    customSetCount++;
+    const div = document.createElement('div');
+    div.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 24px; gap:6px; margin-bottom:6px; align-items:center;';
+    div.innerHTML = `
+        <input type="number" class="form-control" placeholder="Kg" id="cs_w${customSetCount}" step="0.5" min="0">
+        <input type="text"   class="form-control" placeholder="Reps" id="cs_r${customSetCount}">
+        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:1rem;">✕</button>
+    `;
+    document.getElementById('setsList').appendChild(div);
+}
+
+function addCustomExercise() {
+    const name = document.getElementById('customExName').value.trim();
+    const groupId = parseInt(document.getElementById('customExGroup').value);
+    if (!name) { alert('Digite o nome do exercício'); return; }
+    const sets = [];
+    document.querySelectorAll('#setsList > div').forEach((row, i) => {
+        customSetCount++;
+        const w = row.querySelector('input[type="number"]').value;
+        const r = row.querySelector('input[type="text"]').value;
+        if (r) sets.push({ weight: w || null, reps: r });
+    });
+    if (sets.length === 0) sets.push({ weight: null, reps: '10' });
+    customExercises.push({ name, group_id: groupId, sets });
+
+    // Show added exercise
+    const list = document.getElementById('customExList');
+    const d = document.createElement('div');
+    d.style.cssText = 'background:var(--bg3); border:1px solid var(--border); border-radius:9px; padding:10px 13px; margin-bottom:6px; font-size:0.82rem;';
+    d.innerHTML = `<strong>${name}</strong> — ${sets.length} série(s)`;
+    list.appendChild(d);
+
+    // Reset form
+    document.getElementById('customExName').value = '';
+    document.getElementById('setsList').innerHTML = '';
+    customSetCount = 0;
+    addCustomSet();
+    document.getElementById('btnStartCustom').style.display = 'block';
+}
+
+function startCustom() {
+    if (customExercises.length === 0) return;
+    // Store in sessionStorage and redirect
+    sessionStorage.setItem('customWorkout', JSON.stringify(customExercises));
+    window.location.href = '/live/custom';
 }
 </script>
 {% endblock %}
