@@ -106,7 +106,15 @@ def delete(session_id):
 def start():
     plans = WorkoutPlan.query.filter_by(user_id=current_user.id).all()
     groups = MuscleGroup.query.all()
-    return render_template('history/start.html', plans=plans, groups=groups)
+    today = _today_brazil()
+    # Find which plans have sessions today
+    today_sessions = {
+        ws.plan_id: ws
+        for ws in WorkoutSession.query.filter_by(user_id=current_user.id, date=today).all()
+        if ws.plan_id
+    }
+    return render_template('history/start.html', plans=plans, groups=groups,
+                           today_sessions=today_sessions)
 
 
 # ── Live workout ──────────────────────────────────────────────────────────────
@@ -199,12 +207,31 @@ def live(plan_id):
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
 
-    # Session created lazily on first exercise save
-    session_id = 'pending'
+    import json as _json
+
+    # Check if there's an existing session for this plan today (re-entry)
+    today = _today_brazil()
+    existing_session = None
+    done_exercise_ids = []
+    if plan_id_val:
+        existing_session = WorkoutSession.query.filter_by(
+            user_id=current_user.id,
+            plan_id=plan_id_val,
+            date=today
+        ).first()
+        if existing_session:
+            # Get which exercises were already saved in this session
+            done_exercise_ids = [
+                se.exercise_id for se in
+                db.session.query(SessionExercise.exercise_id).filter_by(
+                    session_id=existing_session.id
+                ).distinct().all()
+            ]
+
+    session_id = str(existing_session.id) if existing_session else 'pending'
     plan_id_for_session = plan_id_val
     selected_group_ids_for_session = selected_group_ids
 
-    import json as _json
     exercise_ids_json = _json.dumps([e.id for e in exercises])
     pe_ids_json = _json.dumps([getattr(e, 'pe_id', None) for e in exercises])
     plan_id_int = plan_id_val
@@ -221,7 +248,9 @@ def live(plan_id):
                            pe_ids_json=pe_ids_json,
                            plan_id_int=plan_id_int,
                            all_groups=all_groups,
-                           selected_group_ids=selected_group_ids)
+                           selected_group_ids=selected_group_ids,
+                           done_exercise_ids=done_exercise_ids,
+                           is_resuming=existing_session is not None)
 
 
 # ── Real-time exercise save ───────────────────────────────────────────────────
