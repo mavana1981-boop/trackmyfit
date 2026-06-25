@@ -342,33 +342,24 @@ const isResuming         = {{ 'true' if (is_resuming is defined and is_resuming)
 // Track which set inputs user actually changed
 const changed = {}; // "ei_si" -> true
 
-// Elapsed timer — server offset + localStorage fallback
-const serverElapsed = {{ elapsed_seconds if elapsed_seconds is defined else 0 }};
-const sessionKey = 'fittrack_timer_{{ session_id }}';
-
-// Use server elapsed if resuming (is_resuming=true), otherwise check localStorage
+// Timer — pure localStorage, keyed by plan_id to survive page reloads
+const PLAN_KEY = 'fittrack_t0_plan_{{ plan_id or "free" }}';
+const stored = localStorage.getItem(PLAN_KEY);
+// If stored and less than 8 hours ago, resume; otherwise start fresh
 let t0;
-{% if is_resuming is defined and is_resuming %}
-    // Resuming: use server-calculated elapsed
-    t0 = Date.now() - (serverElapsed * 1000);
-    localStorage.setItem(sessionKey, String(t0));
-{% else %}
-    // New session: check if we have a stored t0 for this session
-    const stored = localStorage.getItem(sessionKey);
-    if (stored && sessionId !== 'pending') {
-        t0 = parseInt(stored);
+if (stored) {
+    const candidate = parseInt(stored);
+    const age = Date.now() - candidate;
+    if (age > 0 && age < 8 * 3600 * 1000) {
+        t0 = candidate;
     } else {
         t0 = Date.now();
+        localStorage.setItem(PLAN_KEY, String(t0));
     }
-{% endif %}
-
-// Update localStorage whenever we have a real session_id
-function saveTimerState() {
-    if (sessionId && sessionId !== 'pending') {
-        localStorage.setItem('fittrack_timer_' + sessionId, String(t0));
-    }
+} else {
+    t0 = Date.now();
+    localStorage.setItem(PLAN_KEY, String(t0));
 }
-setInterval(saveTimerState, 5000);
 
 function updateTimer() {
     const elapsed = Math.floor((Date.now() - t0) / 1000);
