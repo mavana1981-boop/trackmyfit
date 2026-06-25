@@ -106,7 +106,7 @@
 
 <!-- SCREEN 1: Overview -->
 <div id="overviewScreen">
-    {% if is_resuming %}
+    {% if is_resuming is defined and is_resuming %}
     <div style="background:rgba(255,107,43,0.1); border:1px solid rgba(255,107,43,0.3); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:0.78rem; color:var(--orange); font-weight:600;">
         ↩ Retomando treino de hoje — exercícios em vermelho já foram registrados
     </div>
@@ -179,7 +179,7 @@
                                 <input class="set-inp" type="number" step="0.5" min="0"
                                     id="w{{ ei }}_{{ si }}"
                                     value="{{ ex.weight or '' }}" placeholder="—"
-                                    oninput="trackChange({{ ei }}, {{ si }})">
+                                    oninput="trackChange({{ ei }}, {{ si }})" onblur="cleanReps(this)">
                                 {% if ex.suggest_increase and si == 0 %}
                                 <div class="suggest-lbl">cogite aumentar peso</div>
                                 {% endif %}
@@ -187,7 +187,7 @@
                             <input class="set-inp" type="text"
                                 id="r{{ ei }}_{{ si }}"
                                 value="{{ s.reps }}" placeholder="—"
-                                oninput="trackChange({{ ei }}, {{ si }})">
+                                oninput="trackChange({{ ei }}, {{ si }})" onblur="cleanReps(this)">
                             <button class="set-check" id="chk{{ ei }}_{{ si }}" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
                             <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
                                 style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
@@ -201,7 +201,7 @@
                                 <input class="set-inp" type="number" step="0.5" min="0"
                                     id="w{{ ei }}_{{ si }}"
                                     value="{{ ex.weight or '' }}" placeholder="—"
-                                    oninput="trackChange({{ ei }}, {{ si }})">
+                                    oninput="trackChange({{ ei }}, {{ si }})" onblur="cleanReps(this)">
                                 {% if ex.suggest_increase and si == 0 %}
                                 <div class="suggest-lbl">cogite aumentar peso</div>
                                 {% endif %}
@@ -209,7 +209,7 @@
                             <input class="set-inp" type="text"
                                 id="r{{ ei }}_{{ si }}"
                                 value="{{ ex.reps }}" placeholder="—"
-                                oninput="trackChange({{ ei }}, {{ si }})">
+                                oninput="trackChange({{ ei }}, {{ si }})" onblur="cleanReps(this)">
                             <button class="set-check" id="chk{{ ei }}_{{ si }}" onclick="checkSet({{ ei }}, {{ si }})">✓</button>
                             <button type="button" onclick="removeSetRow({{ ei }}, {{ si }}, this)"
                                 style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.85rem; padding:0;">✕</button>
@@ -337,13 +337,14 @@ const exerciseIds        = {{ exercise_ids_json|safe }};
 let   sessionId          = '{{ session_id }}';
 const planIdForSession   = {{ plan_id_for_session or 'null' }};
 const groupIdsForSession = {{ group_ids_for_session|tojson }};
-const doneExerciseIds    = new Set({{ done_exercise_ids|tojson }});
-const isResuming         = {{ 'true' if is_resuming else 'false' }};
+const doneExerciseIds    = new Set({{ done_exercise_ids|tojson if done_exercise_ids is defined else '[]' }});
+const isResuming         = {{ 'true' if (is_resuming is defined and is_resuming) else 'false' }};
 // Track which set inputs user actually changed
 const changed = {}; // "ei_si" -> true
 
-// Elapsed timer with seconds
-const t0 = Date.now();
+// Elapsed timer — starts from server-provided offset (preserves time on re-entry)
+const elapsedOffset = {{ elapsed_seconds if elapsed_seconds is defined else 0 }};
+const t0 = Date.now() - (elapsedOffset * 1000);
 function updateTimer() {
     const elapsed = Math.floor((Date.now() - t0) / 1000);
     const h = Math.floor(elapsed / 3600);
@@ -383,6 +384,11 @@ function openExercise(idx) {
     document.getElementById('dot'+idx).scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
 }
 
+// Strip non-numeric chars from reps field (keep digits and dash only)
+function cleanReps(el) {
+    el.value = el.value.replace(/[^0-9\-]/g, '');
+}
+
 // Track field changes
 function trackChange(ei, si) {
     changed[ei+'_'+si] = true;
@@ -399,8 +405,19 @@ function checkSet(ei, si) {
     if (!row) return;
     const btn = document.getElementById('chk'+ei+'_'+si) || row.querySelector('.set-check');
     if (!btn) return;
+    const nowDone = !btn.classList.contains('done');
     btn.classList.toggle('done');
-    row.classList.toggle('done-row');
+    row.classList.toggle('done-row', nowDone);
+    // Fix 3: save exercise immediately when any set is checked
+    if (nowDone) {
+        trackChange(ei, si); // mark as changed
+        _saveExercise(ei).then(saved => {
+            if (saved) {
+                document.getElementById('dot'+ei)?.classList.add('has-data');
+                document.getElementById('gc'+ei)?.classList.add('has-data');
+            }
+        });
+    }
 }
 
 // Add new set row dynamically
