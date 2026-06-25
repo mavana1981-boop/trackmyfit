@@ -342,9 +342,34 @@ const isResuming         = {{ 'true' if (is_resuming is defined and is_resuming)
 // Track which set inputs user actually changed
 const changed = {}; // "ei_si" -> true
 
-// Elapsed timer — starts from server-provided offset (preserves time on re-entry)
-const elapsedOffset = {{ elapsed_seconds if elapsed_seconds is defined else 0 }};
-const t0 = Date.now() - (elapsedOffset * 1000);
+// Elapsed timer — server offset + localStorage fallback
+const serverElapsed = {{ elapsed_seconds if elapsed_seconds is defined else 0 }};
+const sessionKey = 'fittrack_timer_{{ session_id }}';
+
+// Use server elapsed if resuming (is_resuming=true), otherwise check localStorage
+let t0;
+{% if is_resuming is defined and is_resuming %}
+    // Resuming: use server-calculated elapsed
+    t0 = Date.now() - (serverElapsed * 1000);
+    localStorage.setItem(sessionKey, String(t0));
+{% else %}
+    // New session: check if we have a stored t0 for this session
+    const stored = localStorage.getItem(sessionKey);
+    if (stored && sessionId !== 'pending') {
+        t0 = parseInt(stored);
+    } else {
+        t0 = Date.now();
+    }
+{% endif %}
+
+// Update localStorage whenever we have a real session_id
+function saveTimerState() {
+    if (sessionId && sessionId !== 'pending') {
+        localStorage.setItem('fittrack_timer_' + sessionId, String(t0));
+    }
+}
+setInterval(saveTimerState, 5000);
+
 function updateTimer() {
     const elapsed = Math.floor((Date.now() - t0) / 1000);
     const h = Math.floor(elapsed / 3600);
@@ -509,6 +534,8 @@ async function _saveExercise(ei) {
         const data = await resp.json();
         if (data.ok && data.session_id) {
             sessionId = String(data.session_id); // Update from 'pending' to real ID
+            // Save timer state now that we have a real session ID
+            localStorage.setItem('fittrack_timer_' + sessionId, String(t0));
         }
         return data.ok === true;
     } catch(e) { return false; }
