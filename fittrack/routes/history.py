@@ -188,6 +188,7 @@ def live(plan_id):
                 db.session.query(SessionExercise)
                 .join(WorkoutSession)
                 .filter(WorkoutSession.user_id == current_user.id,
+                        WorkoutSession.plan_id == plan_id_val,
                         SessionExercise.exercise_id == pe.exercise_id,
                         SessionExercise.weight_kg.isnot(None))
                 .order_by(WorkoutSession.date.desc()).first()
@@ -201,9 +202,15 @@ def live(plan_id):
             e.rest_seconds = pe.rest_seconds
             e.pe_id = pe.id
             e.weight = pe.suggested_weight if pe.suggested_weight else (last.weight_kg if last else None)
+            # Pre-fill reps from last session (same plan), only if numeric
+            if last and last.reps_done:
+                import re as _re
+                reps_val = last.reps_done.strip()
+                if _re.match(r'^[\d\-\.]+$', reps_val):
+                    e.reps = reps_val
             e.coach_notes = pe.notes or ''
             e.series_data = getattr(pe, 'series_data', None) or None
-            e.history = _exercise_history(current_user.id, pe.exercise_id)
+            e.history = _exercise_history(current_user.id, pe.exercise_id, plan_id=plan_id_val)
             e.suggest_increase = _should_suggest_increase(e.history)
             exercises.append(e)
 
@@ -213,6 +220,7 @@ def live(plan_id):
     today = _today_brazil()
     existing_session = None
     done_exercise_ids = []
+    elapsed_seconds = 0
     if plan_id_val:
         existing_session = WorkoutSession.query.filter_by(
             user_id=current_user.id,
@@ -220,13 +228,16 @@ def live(plan_id):
             date=today
         ).first()
         if existing_session:
-            # Get which exercises were already saved in this session
             done_exercise_ids = [
                 se.exercise_id for se in
                 db.session.query(SessionExercise.exercise_id).filter_by(
                     session_id=existing_session.id
                 ).distinct().all()
             ]
+            # Calculate elapsed time from when session was created
+            if hasattr(existing_session, 'started_at') and existing_session.started_at:
+                import datetime as _dt
+                elapsed_seconds = int((datetime.now(timezone.utc) - existing_session.started_at.replace(tzinfo=timezone.utc)).total_seconds())
 
     session_id = str(existing_session.id) if existing_session else 'pending'
     plan_id_for_session = plan_id_val
@@ -250,7 +261,8 @@ def live(plan_id):
                            all_groups=all_groups,
                            selected_group_ids=selected_group_ids,
                            done_exercise_ids=done_exercise_ids,
-                           is_resuming=existing_session is not None)
+                           is_resuming=existing_session is not None,
+                           elapsed_seconds=elapsed_seconds)
 
 
 # ── Real-time exercise save ───────────────────────────────────────────────────
