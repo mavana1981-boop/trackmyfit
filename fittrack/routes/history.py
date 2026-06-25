@@ -12,18 +12,19 @@ def _today_brazil():
     return (datetime.now(timezone.utc) - timedelta(hours=3)).date()
 
 
-def _exercise_history(user_id, exercise_id, limit=10):
-    return (
+def _exercise_history(user_id, exercise_id, limit=10, plan_id=None):
+    """Last N sessions for this exercise, optionally filtered by plan."""
+    q = (
         db.session.query(SessionExercise)
         .join(WorkoutSession)
         .filter(
             WorkoutSession.user_id == user_id,
             SessionExercise.exercise_id == exercise_id
         )
-        .order_by(WorkoutSession.date.desc())
-        .limit(limit)
-        .all()
-    )[::-1]
+    )
+    if plan_id:
+        q = q.filter(WorkoutSession.plan_id == plan_id)
+    return q.order_by(WorkoutSession.date.desc()).limit(limit).all()[::-1]
 
 
 def _should_suggest_increase(history):
