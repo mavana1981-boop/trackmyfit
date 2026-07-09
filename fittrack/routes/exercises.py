@@ -109,3 +109,38 @@ def create_quick():
     db.session.add(ex)
     db.session.commit()
     return jsonify({'ok': True, 'exercise_id': ex.id, 'name': ex.name})
+
+@exercises_bp.route('/exercises/edit-plan-exercise-quick', methods=['POST'])
+@login_required
+def edit_plan_exercise_quick():
+    """Edit exercise name and notes from the live workout screen."""
+    from flask import jsonify, request as req
+    from models import PlanExercise, WorkoutPlan
+    data = req.json or {}
+    pe_id = data.get('pe_id')
+    name  = (data.get('name') or '').strip()
+    notes = (data.get('notes') or '').strip()
+    if not pe_id or not name:
+        return jsonify({'ok': False}), 400
+    # Verify ownership via plan
+    pe = PlanExercise.query.join(WorkoutPlan).filter(
+        PlanExercise.id == int(pe_id),
+        WorkoutPlan.user_id == current_user.id
+    ).first()
+    if not pe:
+        return jsonify({'ok': False}), 404
+    # Update or create exercise name
+    ex = pe.exercise
+    if ex.name.lower() != name.lower():
+        # Check if exercise with this name exists
+        existing = Exercise.query.filter(
+            db.func.lower(Exercise.name) == name.lower(),
+            Exercise.muscle_group_id == ex.muscle_group_id
+        ).first()
+        if existing:
+            pe.exercise_id = existing.id
+        else:
+            ex.name = name
+    pe.notes = notes or None
+    db.session.commit()
+    return jsonify({'ok': True})
