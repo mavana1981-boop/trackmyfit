@@ -390,6 +390,38 @@
 
 {% block extra_js %}
 <script>
+// ── Edit exercise inline ──────────────────────────────────────────────────────
+function toggleExEdit(ei) {
+    const form = document.getElementById('exEditForm' + ei);
+    if (!form) { console.log('form not found: exEditForm' + ei); return; }
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveExEdit(ei, peId) {
+    const name  = (document.getElementById('editName'  + ei)?.value || '').trim();
+    const notes = (document.getElementById('editNotes' + ei)?.value || '').trim();
+    if (!name) { alert('Nome não pode ser vazio'); return; }
+    try {
+        const resp = await fetch('/exercises/edit-plan-exercise-quick', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ pe_id: peId, name, notes })
+        });
+        const data = await resp.json();
+        if (!data.ok) { alert('Erro ao salvar'); return; }
+        const card = document.getElementById('ex' + ei);
+        const title = card?.querySelector('.ex-title');
+        if (title) title.textContent = name;
+        const gc = document.getElementById('gc' + ei);
+        if (gc) { const n = gc.querySelector('.gc-name'); if (n) n.textContent = name; }
+        const notesBox  = document.getElementById('coachNotes'     + ei);
+        const notesText = document.getElementById('coachNotesText' + ei);
+        if (notesText) notesText.textContent = notes;
+        if (notesBox)  notesBox.style.display = notes ? 'block' : 'none';
+        toggleExEdit(ei);
+    } catch(e) { console.error(e); alert('Erro ao salvar'); }
+}
+
 const exerciseIds        = {{ exercise_ids_json|safe }};
 let   sessionId          = '{{ session_id }}';
 const planIdForSession   = {{ plan_id_for_session or 'null' }};
