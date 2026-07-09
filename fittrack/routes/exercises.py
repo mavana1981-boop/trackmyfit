@@ -80,3 +80,32 @@ def api_list():
         'muscle_group': e.muscle_group.name,
         'difficulty': e.difficulty, 'equipment': e.equipment
     } for e in exercises])
+
+@exercises_bp.route('/exercises/create-quick', methods=['POST'])
+@login_required
+def create_quick():
+    """Create a new exercise quickly from the live workout screen."""
+    from flask import jsonify, request as req
+    data = req.json or {}
+    name = (data.get('name') or '').strip()
+    group_id = data.get('muscle_group_id')
+    if not name or not group_id:
+        return jsonify({'ok': False, 'error': 'Missing fields'}), 400
+    # Check if exercise already exists (case-insensitive)
+    existing = Exercise.query.filter(
+        db.func.lower(Exercise.name) == name.lower(),
+        Exercise.muscle_group_id == int(group_id)
+    ).first()
+    if existing:
+        return jsonify({'ok': True, 'exercise_id': existing.id, 'name': existing.name})
+    ex = Exercise(
+        name=name,
+        muscle_group_id=int(group_id),
+        difficulty='Intermediário',
+        equipment='Livre',
+        description='',
+        instructions=''
+    )
+    db.session.add(ex)
+    db.session.commit()
+    return jsonify({'ok': True, 'exercise_id': ex.id, 'name': ex.name})
