@@ -770,16 +770,16 @@ function addExerciseToLive(exId, name, sets, reps) {
     // Build set rows
     let setRows = '';
     for (let si = 0; si < sets; si++) {
-        setRows += `<div class="set-row" id="sr${ei}_${si}" style="grid-template-columns:28px 1fr 1fr 36px 24px;">
+        setRows += `<div class="set-row" id="sr${ei}_${si}" style="display:grid;grid-template-columns:28px 1fr 1fr 36px 24px;gap:4px;padding:7px 12px;border-bottom:1px solid var(--border);align-items:center;width:100%;box-sizing:border-box;">
             <div class="set-num">${si+1}</div>
             <div class="set-inp-wrap">
                 <input class="set-inp" type="number" step="0.5" min="0"
                     id="w${ei}_${si}" placeholder="—"
-                    oninput="trackChange(${ei},${si})" data-changed="1">
+                    oninput="trackChange(${ei},${si})" data-changed="1" style="width:100%;">
             </div>
             <input class="set-inp" type="text" id="r${ei}_${si}"
                 value="${reps}" placeholder="—"
-                oninput="trackChange(${ei},${si})" data-changed="1">
+                oninput="trackChange(${ei},${si})" data-changed="1" style="width:100%;">
             <button class="set-check" id="chk${ei}_${si}" onclick="checkSet(${ei},${si})">✓</button>
             <button type="button" onclick="removeSetRow(${ei},${si},this)"
                 style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.85rem;padding:0;">✕</button>
@@ -799,8 +799,8 @@ function addExerciseToLive(exId, name, sets, reps) {
                 <span class="badge badge-muted">${reps} reps</span>
             </div>
         </div>
-        <div class="sets-card">
-            <div class="sets-head" style="grid-template-columns:28px 1fr 1fr 36px 24px;">
+        <div class="sets-card" style="width:100%;box-sizing:border-box;">
+            <div class="sets-head" style="grid-template-columns:28px 1fr 1fr 36px 24px;display:grid;gap:4px;padding:7px 12px;">
                 <span>#</span><span>Kg</span><span>Reps</span><span>✓</span><span></span>
             </div>
             <div id="setsBody${ei}">${setRows}</div>
