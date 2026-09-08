@@ -60,17 +60,25 @@ def dashboard():
 
     # Muscle group last trained date
     all_groups = MuscleGroup.query.all()
-    group_last_trained = {}
+    # Track last trained date AND plan name per group (only from explicit tags)
+    group_last_trained = {}   # group_id -> (date, session)
     for s in all_sessions:
-        for mg in s.effective_muscle_groups:
+        for mg in s.effective_muscle_groups:  # only explicit tags
             if mg.id not in group_last_trained:
-                group_last_trained[mg.id] = s.date
+                group_last_trained[mg.id] = s
 
     group_suggestions = []
     for g in all_groups:
-        last = group_last_trained.get(g.id)
-        days_ago = (today - last).days if last else None
-        group_suggestions.append({'group': g, 'last_date': last, 'days_ago': days_ago})
+        last_session = group_last_trained.get(g.id)
+        last_date = last_session.date if last_session else None
+        days_ago = (today - last_date).days if last_date else None
+        plan_name = last_session.display_name if last_session else None
+        group_suggestions.append({
+            'group': g,
+            'last_date': last_date,
+            'days_ago': days_ago,
+            'last_plan': plan_name
+        })
     group_suggestions.sort(
         key=lambda x: (x['days_ago'] is not None, -(x['days_ago'] or 9999))
     )
