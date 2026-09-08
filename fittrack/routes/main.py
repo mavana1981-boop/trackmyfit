@@ -97,3 +97,23 @@ def dashboard():
                            all_groups=all_groups,
                            all_plans=all_plans,
                            today=today)
+
+@main_bp.route('/dashboard/rebuild-groups', methods=['POST'])
+@login_required
+def rebuild_groups():
+    """Rebuild muscle group tags for all sessions based on exercises done."""
+    from models import WorkoutSession, SessionExercise, MuscleGroup
+    sessions = WorkoutSession.query.filter_by(user_id=current_user.id).all()
+    updated = 0
+    for s in sessions:
+        if not s.muscle_groups:  # only sessions without explicit tags
+            seen = {}
+            for se in s.session_exercises:
+                mg = se.exercise.muscle_group
+                seen[mg.id] = mg
+            if seen:
+                s.muscle_groups = list(seen.values())
+                updated += 1
+    db.session.commit()
+    from flask import jsonify
+    return jsonify({'ok': True, 'updated': updated})
