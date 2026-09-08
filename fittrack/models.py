@@ -109,14 +109,8 @@ class WorkoutSession(db.Model):
 
     @property
     def effective_muscle_groups(self):
-        """Explicit groups first; fall back to groups inferred from exercises."""
-        if self.muscle_groups:
-            return self.muscle_groups
-        seen = {}
-        for se in self.session_exercises:
-            mg = se.exercise.muscle_group
-            seen[mg.id] = mg
-        return list(seen.values())
+        """Only explicit muscle group tags set by the user."""
+        return self.muscle_groups or []
 
 
 class SessionExercise(db.Model):
