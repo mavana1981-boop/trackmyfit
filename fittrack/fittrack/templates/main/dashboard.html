@@ -4,138 +4,248 @@
 {% block topbar %}
 <div class="topbar">
     <div style="flex:1;">
-        <div style="font-size:0.65rem; color:var(--text2); font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">Bem-vindo de volta</div>
-        <h1 style="font-size:1.2rem;">{{ current_user.name.split()[0] }}</h1>
+        <div style="font-size:0.56rem; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:1px;">{{ today.strftime('%d de %B').title() }}</div>
+        <h1 style="font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:0.5px;">{{ current_user.name.split()[0] }}</h1>
     </div>
-    <div class="topbar-right">
-        <a href="{{ url_for('auth.logout') }}" class="topbar-btn">Sair</a>
-    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-btn">Sair</a>
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-.action-btn {
-    display:flex; align-items:center; gap:14px;
-    background:var(--bg3); border:1px solid var(--border);
-    border-radius:14px; padding:16px 18px;
-    text-decoration:none; color:var(--text);
-    transition:all 0.15s; margin-bottom:10px;
-}
-.action-btn:active { transform:scale(0.98); background:var(--bg4); }
-.action-btn.primary { background:var(--red); border-color:var(--red); }
-.action-btn.primary .a-sub { color:rgba(255,255,255,0.65); }
-.a-icon { font-size:1.8rem; flex-shrink:0; }
-.a-title { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
-.a-sub { font-size:0.75rem; color:var(--text2); margin-top:2px; }
-.a-arrow { margin-left:auto; color:var(--text3); font-size:1.1rem; }
+.dash-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; margin-bottom:12px; overflow:hidden; }
+.dash-head { padding:13px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.dash-head-title { font-family:'Bebas Neue',sans-serif; font-size:0.82rem; letter-spacing:1.5px; color:var(--text2); }
+.dash-body { padding:14px 16px; }
 
-.week-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:10px; }
-.week-day {
-    aspect-ratio:1; border-radius:8px;
-    background:var(--bg4); border:1px solid var(--border);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:2px;
-}
-.week-day.done { background:var(--red); border-color:var(--red); }
-.week-day.today { border-color:var(--red); }
-.wd-letter { font-family:'Syne',sans-serif; font-size:0.55rem; font-weight:800; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; }
-.week-day.done .wd-letter { color:rgba(255,255,255,0.7); }
-.week-day.today .wd-letter { color:var(--red); }
-.wd-check { font-size:0.7rem; }
+/* Stats */
+.stats-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.stat-box { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:13px 15px; }
+.stat-num { font-family:'Bebas Neue',sans-serif; font-size:2.2rem; line-height:1; letter-spacing:1px; }
+.stat-lbl { font-size:0.58rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px; }
+
+/* Planejamento */
+.plan-quick-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.plan-quick-row:last-child { border-bottom:none; }
+.plan-quick-name { flex:1; font-weight:700; font-size:0.86rem; }
+.plan-quick-meta { font-size:0.7rem; color:var(--text2); margin-top:2px; }
+.rest-badge { font-size:0.62rem; font-weight:700; padding:3px 7px; border-radius:5px; flex-shrink:0; }
+.rest-fresh { background:rgba(48,209,88,0.1); color:var(--success); }
+.rest-warn  { background:rgba(255,184,0,0.1); color:var(--yellow); }
+.rest-overdue { background:rgba(232,25,44,0.1); color:var(--red); }
+.rest-never { background:var(--bg4); color:var(--text3); }
+
+/* Treino tabs */
+.tab-row { display:flex; background:var(--bg3); border-radius:50px; padding:3px; margin-bottom:14px; }
+.tab-btn { flex:1; padding:8px; border:none; border-radius:50px; background:transparent; color:var(--text2); font-weight:700; font-size:0.75rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.4px; transition:all 0.15s; }
+.tab-btn.on { background:var(--red); color:white; }
+
+/* Plan list */
+.plan-list-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.plan-list-row:last-child { border-bottom:none; }
+.plan-list-info { flex:1; min-width:0; }
+.plan-list-name { font-weight:700; font-size:0.86rem; }
+.plan-list-tags { display:flex; flex-wrap:wrap; gap:3px; margin-top:3px; }
+.plan-tag { background:var(--bg4); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-size:0.6rem; font-weight:600; color:var(--text2); }
+.start-btn { background:var(--red); color:white; border:none; border-radius:7px; padding:8px 13px; font-family:'Bebas Neue',sans-serif; font-size:0.88rem; letter-spacing:0.4px; cursor:pointer; white-space:nowrap; text-decoration:none; }
+
+/* Group picker */
+.group-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:12px; }
+.group-tile { background:var(--bg3); border:1.5px solid var(--border); border-radius:10px; padding:11px 5px; text-align:center; cursor:pointer; transition:all 0.15s; font-size:0.7rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; }
+.group-tile.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
+
+/* History */
+.hist-row { display:flex; align-items:flex-start; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); text-decoration:none; color:var(--text); }
+.hist-row:last-child { border-bottom:none; }
+.hist-date { flex-shrink:0; text-align:center; width:34px; }
+.hist-d { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--red); line-height:1; }
+.hist-m { font-size:0.54rem; font-weight:700; color:var(--text2); text-transform:uppercase; }
+.hist-body { flex:1; min-width:0; }
+.hist-name { font-weight:700; font-size:0.84rem; margin-bottom:4px; }
+.hist-tags { display:flex; flex-wrap:wrap; gap:3px; }
+.hist-tag { background:var(--bg4); border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:0.62rem; font-weight:600; color:var(--text2); }
+.hist-dur { font-size:0.66rem; color:var(--text3); flex-shrink:0; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content">
 
-    <!-- Stats row -->
-    <div class="stats-grid" style="margin-bottom:20px;">
-        <div class="stat-card">
-            <div class="stat-number" style="color:var(--red);">{{ weekly_sessions }}</div>
-            <div class="stat-label">Esta semana</div>
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-num" style="color:var(--red);">{{ weekly_sessions }}</div>
+            <div class="stat-lbl">Esta semana</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-number" style="color:var(--text);">{{ total_sessions }}</div>
-            <div class="stat-label">Total treinos</div>
+        <div class="stat-box">
+            <div class="stat-num">{{ monthly_sessions }}</div>
+            <div class="stat-lbl">Este mês</div>
         </div>
     </div>
 
-    <!-- Actions -->
-    <div class="section-header"><span class="section-title">Ações</span></div>
-
-    <a href="{{ url_for('history.start') }}" class="action-btn primary">
-        <span class="a-icon">▶️</span>
-        <div>
-            <div class="a-title">Começar Treino</div>
-            <div class="a-sub">Plano ou avulso por grupo muscular</div>
-        </div>
-        <span class="a-arrow">›</span>
-    </a>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
-        <a href="{{ url_for('history.record') }}" class="action-btn" style="margin-bottom:0; flex-direction:column; align-items:flex-start; gap:8px; padding:14px;">
-            <span style="font-size:1.5rem;">✏️</span>
-            <div>
-                <div class="a-title" style="font-size:0.85rem;">Registrar</div>
-                <div class="a-sub" style="font-size:0.7rem;">Treino já feito</div>
+    <!-- CARD: Planejamento -->
+    <div class="dash-card">
+        <div class="dash-head">
+            <span class="dash-head-title">Planejamento</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button onclick="rebuildGroups(this)" class="topbar-btn" title="Atualizar grupos do histórico">↻</button>
+                <a href="{{ url_for('workouts.import_pdf') }}" class="topbar-btn">📄 PDF</a>
+                <a href="{{ url_for('workouts.index') }}" class="topbar-btn">Editar</a>
+                <a href="{{ url_for('workouts.new') }}" class="topbar-btn">+ Criar</a>
             </div>
-        </a>
-        <a href="{{ url_for('workouts.index') }}" class="action-btn" style="margin-bottom:0; flex-direction:column; align-items:flex-start; gap:8px; padding:14px;">
-            <span style="font-size:1.5rem;">📋</span>
-            <div>
-                <div class="a-title" style="font-size:0.85rem;">Meus Planos</div>
-                <div class="a-sub" style="font-size:0.7rem;">Ver e criar</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Week streak -->
-    <div class="section-header"><span class="section-title">Semana atual</span></div>
-    <div class="card" style="margin-bottom:20px;">
-        <div class="week-grid">
-            {% set days = ['S','T','Q','Q','S','S','D'] %}
-            {% set today_wd = today.weekday() %}
-            {% for i in range(7) %}
-                {% set done = namespace(val=false) %}
-                {% for s in sessions_last_30 %}{% if s.date.weekday() == i %}{% set done.val = true %}{% endif %}{% endfor %}
-                <div class="week-day {{ 'done' if done.val else ('today' if i == today_wd else '') }}">
-                    <span class="wd-letter">{{ days[i] }}</span>
-                    <span class="wd-check">{% if done.val %}✓{% elif i == today_wd %}·{% endif %}</span>
-                </div>
-            {% endfor %}
         </div>
-    </div>
-
-    <!-- Recent sessions -->
-    <div class="section-header">
-        <span class="section-title">Últimos treinos</span>
-        <a href="{{ url_for('history.index') }}" class="section-link">Ver todos</a>
-    </div>
-    <div class="card" style="padding:0 16px;">
-        {% if recent_sessions %}
-            {% for s in recent_sessions %}
-            <a href="{{ url_for('history.detail', session_id=s.id) }}" class="list-item">
-                <div class="list-icon" style="background:var(--red-glow); border-color:rgba(232,25,44,0.2);">📅</div>
-                <div class="list-item-body">
-                    <div class="list-item-name">{{ s.date.strftime('%d/%m/%Y') }}
-                        {% if s.date == today %}<span class="badge badge-red" style="margin-left:6px; font-size:0.6rem;">HOJE</span>{% endif %}
+        <div class="dash-body" style="padding:8px 16px;">
+            {% if group_suggestions %}
+                {% for item in group_suggestions %}
+                {% set days = item.days_ago %}
+                {% set cls = 'rest-never' if days is none else ('rest-fresh' if days <= 2 else ('rest-warn' if days <= 4 else 'rest-overdue')) %}
+                <div class="plan-quick-row">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:700; font-size:0.84rem;">{{ item.group.name }}</div>
+                        {% if item.last_plan %}
+                        <div style="font-size:0.68rem; color:var(--text2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            {{ item.last_plan }}
+                        </div>
+                        {% endif %}
                     </div>
-                    <div class="list-item-sub">
-                        {% if s.plan %}{{ s.plan.name }} · {% endif %}
-                        {{ s.session_exercises|length }} exercício{% if s.session_exercises|length != 1 %}s{% endif %}
-                        {% if s.duration_minutes %} · {{ s.duration_minutes }}min{% endif %}
-                    </div>
+                    <span class="rest-badge {{ cls }}" style="flex-shrink:0; margin-left:8px;">
+                        {% if days is none %}Nunca
+                        {% elif days == 0 %}Hoje
+                        {% elif days == 1 %}1 dia
+                        {% else %}{{ days }}d{% endif %}
+                    </span>
                 </div>
-                <span class="list-arrow">›</span>
-            </a>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state" style="padding:28px 0;">
-                <div class="empty-icon">💪</div>
-                <div class="empty-title">Nenhum treino ainda</div>
-            </div>
-        {% endif %}
+                {% endfor %}
+            {% else %}
+                <div style="padding:16px 0; text-align:center; color:var(--text3); font-size:0.82rem;">Nenhum treino registrado ainda</div>
+            {% endif %}
+        </div>
     </div>
+
+    <!-- CARD: Treinar -->
+    <div class="dash-card">
+        <div class="dash-head">
+            <span class="dash-head-title">Treinar</span>
+        </div>
+        <div class="dash-body">
+            <div class="tab-row">
+                <button class="tab-btn on" id="tabPlan" onclick="showTab('plan')">Planejado</button>
+                <button class="tab-btn" id="tabFree" onclick="showTab('free')">Avulso</button>
+            </div>
+
+            <!-- Planejado -->
+            <div id="viewPlan">
+                {% if all_plans %}
+                    {% for plan in all_plans %}
+                    <div class="plan-list-row">
+                        <div class="plan-list-info">
+                            <div class="plan-list-name">{{ plan.name }}</div>
+                            <div class="plan-list-tags">
+                                {% for g in plan.muscle_groups %}
+                                <span class="plan-tag">{{ g.name }}</span>
+                                {% endfor %}
+                                <span class="plan-tag">{{ plan.plan_exercises|length }} exerc.</span>
+                            </div>
+                        </div>
+                        <a href="/live/{{ plan.id }}" class="start-btn">Iniciar</a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align:center; padding:18px 0; color:var(--text2);">
+                        <div style="font-size:0.82rem; margin-bottom:10px;">Nenhum plano criado</div>
+                        <a href="{{ url_for('workouts.index') }}" class="btn btn-red btn-sm">Criar plano</a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Avulso -->
+            <div id="viewFree" style="display:none;">
+                <div style="font-size:0.62rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px;">Selecione os grupos</div>
+                <div class="group-grid">
+                    {% for item in group_suggestions %}
+                    <div class="group-tile" data-id="{{ item.group.id }}" onclick="toggleGroup(this)">{{ item.group.name }}</div>
+                    {% endfor %}
+                </div>
+                <button onclick="startFree()" id="btnFree" disabled
+                    class="btn btn-red btn-block"
+                    style="font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:0.5px;">
+                    Iniciar Treino Avulso
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARD: Histórico -->
+    <div class="dash-card">
+        <div class="dash-head">
+            <span class="dash-head-title">Histórico</span>
+            <a href="{{ url_for('history.index') }}" class="section-link" style="font-size:0.72rem;">Ver todos</a>
+        </div>
+        <div style="padding:0 16px;">
+            {% if recent_sessions %}
+                {% for item in recent_sessions %}
+                {% set s = item.session %}
+                <a href="{{ url_for('history.detail', session_id=s.id) }}" class="hist-row">
+                    <div class="hist-date">
+                        <div class="hist-d">{{ s.date.strftime('%d') }}</div>
+                        <div class="hist-m">{{ s.date.strftime('%b') }}</div>
+                    </div>
+                    <div class="hist-body">
+                        <div class="hist-name">{{ s.display_name }}</div>
+                        <div class="hist-tags">
+                            {% for g in item.groups %}
+                            <span class="hist-tag">{{ g.name }}</span>
+                            {% endfor %}
+                            {% if not item.groups %}<span class="hist-tag" style="color:var(--text3);">Sem grupos</span>{% endif %}
+                        </div>
+                    </div>
+                    {% if s.duration_minutes %}<div class="hist-dur">{{ s.duration_minutes }}min</div>{% endif %}
+                </a>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center; padding:24px 0; color:var(--text2); font-size:0.82rem;">Nenhum treino registrado</div>
+            {% endif %}
+        </div>
+    </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function rebuildGroups(btn) {
+    const orig = btn.textContent;
+    btn.textContent = '...';
+    btn.disabled = true;
+    try {
+        const resp = await fetch('/dashboard/rebuild-groups', {method:'POST'});
+        const data = await resp.json();
+        if (data.ok) {
+            // Reload page to show updated data
+            window.location.reload();
+        }
+    } catch(e) {
+        btn.textContent = orig;
+        btn.disabled = false;
+    }
+}
+
+function showTab(tab) {
+    document.getElementById('viewPlan').style.display = tab === 'plan' ? 'block' : 'none';
+    document.getElementById('viewFree').style.display = tab === 'free' ? 'block' : 'none';
+    document.getElementById('tabPlan').classList.toggle('on', tab === 'plan');
+    document.getElementById('tabFree').classList.toggle('on', tab === 'free');
+}
+let selGroups = [];
+function toggleGroup(el) {
+    const id = parseInt(el.dataset.id);
+    el.classList.toggle('sel');
+    if (el.classList.contains('sel')) selGroups.push(id);
+    else selGroups = selGroups.filter(x => x !== id);
+    document.getElementById('btnFree').disabled = selGroups.length === 0;
+}
+function startFree() {
+    if (selGroups.length) window.location.href = '/live/free?groups=' + selGroups.join(',');
+}
+</script>
 {% endblock %}
