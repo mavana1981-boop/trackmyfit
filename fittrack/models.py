@@ -96,7 +96,7 @@ class WorkoutSession(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Explicit muscle groups selected by user
     muscle_groups = db.relationship('MuscleGroup', secondary=session_muscle_groups, lazy=True)
-    session_exercises = db.relationship('SessionExercise', backref='session', lazy=True, cascade='all, delete-orphan')
+    session_exercises = db.relationship('SessionExercise', backref='session', lazy=True, cascade='all, delete-orphan', order_by='SessionExercise.id')
     plan = db.relationship('WorkoutPlan')
 
     @property
