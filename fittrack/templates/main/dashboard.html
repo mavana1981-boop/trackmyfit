@@ -87,9 +87,11 @@
     <div class="dash-card">
         <div class="dash-head">
             <span class="dash-head-title">Planejamento</span>
-            <div style="display:flex; gap:6px;">
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button onclick="rebuildGroups(this)" class="topbar-btn" title="Atualizar grupos do histórico">↻</button>
                 <a href="{{ url_for('workouts.import_pdf') }}" class="topbar-btn">📄 PDF</a>
                 <a href="{{ url_for('workouts.index') }}" class="topbar-btn">Editar</a>
+                <a href="{{ url_for('workouts.suggest') }}{% if top_suggestion %}?groups={{ top_suggestion.group.id }}{% endif %}" class="topbar-btn">Força</a>
                 <a href="{{ url_for('workouts.new') }}" class="topbar-btn">+ Criar</a>
             </div>
         </div>
@@ -212,6 +214,23 @@
 
 {% block extra_js %}
 <script>
+async function rebuildGroups(btn) {
+    const orig = btn.textContent;
+    btn.textContent = '...';
+    btn.disabled = true;
+    try {
+        const resp = await fetch('/dashboard/rebuild-groups', {method:'POST'});
+        const data = await resp.json();
+        if (data.ok) {
+            // Reload page to show updated data
+            window.location.reload();
+        }
+    } catch(e) {
+        btn.textContent = orig;
+        btn.disabled = false;
+    }
+}
+
 function showTab(tab) {
     document.getElementById('viewPlan').style.display = tab === 'plan' ? 'block' : 'none';
     document.getElementById('viewFree').style.display = tab === 'free' ? 'block' : 'none';
