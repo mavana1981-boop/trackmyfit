@@ -106,14 +106,14 @@ def rebuild_groups():
     sessions = WorkoutSession.query.filter_by(user_id=current_user.id).all()
     updated = 0
     for s in sessions:
-        if not s.muscle_groups:  # only sessions without explicit tags
-            seen = {}
-            for se in s.session_exercises:
-                mg = se.exercise.muscle_group
+        seen = {}
+        for se in s.session_exercises:
+            mg = se.exercise.muscle_group
+            if mg:
                 seen[mg.id] = mg
-            if seen:
-                s.muscle_groups = list(seen.values())
-                updated += 1
+        if seen:
+            s.muscle_groups = list(seen.values())
+            updated += 1
     db.session.commit()
     from flask import jsonify
     return jsonify({'ok': True, 'updated': updated})

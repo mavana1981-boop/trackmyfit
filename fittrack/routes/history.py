@@ -24,7 +24,7 @@ def _exercise_history(user_id, exercise_id, limit=10, plan_id=None):
     )
     if plan_id:
         q = q.filter(WorkoutSession.plan_id == plan_id)
-    return q.order_by(WorkoutSession.date.desc()).limit(limit).all()[::-1]
+    return q.order_by(WorkoutSession.date.desc(), SessionExercise.id.asc()).limit(limit).all()[::-1]
 
 
 def _should_suggest_increase(history):
@@ -40,6 +40,16 @@ def _attach_muscle_groups(session, group_ids):
         mg = MuscleGroup.query.get(gid)
         if mg:
             session.muscle_groups.append(mg)
+
+
+def _sync_session_groups(ws):
+    """Tag the session only with groups of exercises actually recorded."""
+    seen = {}
+    for se in ws.session_exercises:
+        mg = se.exercise.muscle_group
+        if mg:
+            seen[mg.id] = mg
+    ws.muscle_groups = list(seen.values())
 
 
 # ── History list & detail ─────────────────────────────────────────────────────
@@ -246,6 +256,7 @@ def live(plan_id):
 
     exercise_ids_json = _json.dumps([e.id for e in exercises])
     pe_ids_json = _json.dumps([getattr(e, 'pe_id', None) for e in exercises])
+    exercise_group_ids_json = _json.dumps([e.muscle_group.id for e in exercises])
     plan_id_int = plan_id_val
     all_groups = MuscleGroup.query.all()
 
@@ -258,6 +269,7 @@ def live(plan_id):
                            group_ids_for_session=selected_group_ids,
                            exercise_ids_json=exercise_ids_json,
                            pe_ids_json=pe_ids_json,
+                           exercise_group_ids_json=exercise_group_ids_json,
                            plan_id_int=plan_id_int,
                            all_groups=all_groups,
                            selected_group_ids=selected_group_ids,
@@ -275,6 +287,32 @@ def exercises_by_group_live(group_id):
     import json as _json
     exercises = Exercise.query.filter_by(muscle_group_id=group_id).order_by(Exercise.name).all()
     return jsonify([{'id': e.id, 'name': e.name} for e in exercises])
+
+
+@history_bp.route('/live/exercise-history/<int:exercise_id>')
+@login_required
+def exercise_history_live(exercise_id):
+    """Last sets (in entered order) + history rows for an exercise."""
+    rows = (db.session.query(SessionExercise)
+            .join(WorkoutSession)
+            .filter(WorkoutSession.user_id == current_user.id,
+                    SessionExercise.exercise_id == exercise_id)
+            .order_by(WorkoutSession.date.desc(), SessionExercise.session_id.desc(),
+                      SessionExercise.id.asc()).limit(60).all())
+    last_sets, history = [], []
+    if rows:
+        last_sid = rows[0].session_id
+        last_sets = [{'weight': r.weight_kg, 'reps': r.reps_done or ''}
+                     for r in rows if r.session_id == last_sid]
+    seen_sessions = []
+    for r in rows:
+        if r.session_id not in seen_sessions:
+            seen_sessions.append(r.session_id)
+        if len(seen_sessions) > 5:
+            break
+        history.append({'date': r.session.date.strftime('%d/%m/%y'),
+                        'weight': r.weight_kg, 'reps': r.reps_done or ''})
+    return jsonify({'last_sets': last_sets, 'history': history})
 
 
 @history_bp.route('/live/save-exercise', methods=['POST'])
@@ -319,8 +357,6 @@ def save_exercise_realtime():
             )
             db.session.add(ws)
             db.session.flush()
-            if group_ids_fs:
-                _attach_muscle_groups(ws, [int(g) for g in group_ids_fs])
             db.session.commit()
 
     # Validate: at least one set with reps
@@ -338,25 +374,37 @@ def save_exercise_realtime():
     if not valid_sets:
         return jsonify({'ok': False, 'error': 'No valid sets'}), 400
 
-    # Remove previous records for this exercise in this session
-    SessionExercise.query.filter_by(
-        session_id=ws.id, exercise_id=int(exercise_id)).delete()
-
-    # Save one SessionExercise per set
+    # Upsert in place (keeps row ids => keeps the order the user entered)
+    existing_rows = (SessionExercise.query
+                     .filter_by(session_id=ws.id, exercise_id=int(exercise_id))
+                     .order_by(SessionExercise.id).all())
     saved_ids = []
-    for s in valid_sets:
-        se = SessionExercise(
-            session_id=ws.id,
-            exercise_id=int(exercise_id),
-            sets_done=1,
-            reps_done=s['reps'],
-            weight_kg=s['weight'],
-            effort_level=effort,
-            notes=notes or None
-        )
-        db.session.add(se)
+    for i, s_ in enumerate(valid_sets):
+        if i < len(existing_rows):
+            se = existing_rows[i]
+            se.sets_done = 1
+            se.reps_done = s_['reps']
+            se.weight_kg = s_['weight']
+            se.effort_level = effort
+            se.notes = notes or None
+        else:
+            se = SessionExercise(
+                session_id=ws.id,
+                exercise_id=int(exercise_id),
+                sets_done=1,
+                reps_done=s_['reps'],
+                weight_kg=s_['weight'],
+                effort_level=effort,
+                notes=notes or None
+            )
+            db.session.add(se)
         db.session.flush()
         saved_ids.append(se.id)
+    for extra in existing_rows[len(valid_sets):]:
+        db.session.delete(extra)
+    db.session.flush()
+    db.session.expire(ws, ['session_exercises'])
+    _sync_session_groups(ws)
 
     db.session.commit()
     return jsonify({'ok': True, 'saved': len(saved_ids), 'session_id': ws.id})

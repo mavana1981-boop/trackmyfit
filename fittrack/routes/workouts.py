@@ -419,3 +419,102 @@ def suggest_weight(plan_id, pe_id):
 def exercises_by_group(group_id):
     exercises = Exercise.query.filter_by(muscle_group_id=group_id).all()
     return jsonify([{'id': e.id, 'name': e.name, 'difficulty': e.difficulty} for e in exercises])
+
+
+# ── Strength-training suggester (rule-based) ──────────────────────────────────
+
+_COMPOUND_KW = ['supino', 'agachamento', 'remada', 'levantamento', 'terra', 'desenvolvimento',
+                'barra fixa', 'puxada', 'leg press', 'stiff', 'mergulho', 'afundo', 'avanço',
+                'hack', 'militar', 'paralelas']
+_ISOLATION_KW = ['crucifixo', 'rosca', 'extensão', 'extensao', 'elevação', 'elevacao', 'pulley',
+                 'corda', 'cadeira', 'mesa', 'panturrilha', 'abdominal', 'kickback', 'peck',
+                 'encolhimento', 'crossover', 'testa']
+
+
+def _strength_score(name, done_before):
+    n = name.lower()
+    score = 0
+    if any(k in n for k in _ISOLATION_KW):
+        score = 0
+    if any(k in n for k in _COMPOUND_KW):
+        score = 3
+        if 'barra' in n or 'halter' in n:
+            score += 1
+    if done_before:
+        score += 1
+    return score
+
+
+def _is_compound(name):
+    n = name.lower()
+    return any(k in n for k in _COMPOUND_KW) and not any(k in n for k in ['extensão', 'extensao', 'rosca'])
+
+
+def _build_suggestion(group_ids, user_id):
+    from models import SessionExercise, WorkoutSession
+    done_ids = {r[0] for r in db.session.query(SessionExercise.exercise_id)
+                .join(WorkoutSession).filter(WorkoutSession.user_id == user_id).distinct().all()}
+    per_group = max(2, min(3, 8 // max(1, len(group_ids))))
+    items = []
+    for gid in group_ids:
+        exs = Exercise.query.filter_by(muscle_group_id=gid).all()
+        ranked = sorted(exs, key=lambda e: (-_strength_score(e.name, e.id in done_ids), e.name))
+        for ex in ranked[:per_group]:
+            comp = _is_compound(ex.name)
+            items.append({
+                'exercise_id': ex.id, 'name': ex.name,
+                'group': ex.muscle_group.name, 'compound': comp,
+                'sets': 5 if comp else 3,
+                'reps': '4-6' if comp else '8-10',
+                'rest_seconds': 150 if comp else 90,
+            })
+    items.sort(key=lambda i: (not i['compound']))  # compounds first
+    return items[:8]
+
+
+@workouts_bp.route('/plans/suggest')
+@login_required
+def suggest():
+    groups = MuscleGroup.query.order_by(MuscleGroup.name).all()
+    pre = [int(g) for g in request.args.get('groups', '').split(',') if g.isdigit()]
+    return render_template('workouts/suggest.html', groups=groups, preselected=pre)
+
+
+@workouts_bp.route('/plans/suggest/generate')
+@login_required
+def suggest_generate():
+    group_ids = [int(g) for g in request.args.get('groups', '').split(',') if g.isdigit()]
+    if not group_ids:
+        return jsonify({'ok': False, 'error': 'Selecione um grupo'}), 400
+    names = [g.name for g in MuscleGroup.query.filter(MuscleGroup.id.in_(group_ids)).all()]
+    return jsonify({'ok': True, 'name': 'Força - ' + ' + '.join(names),
+                    'items': _build_suggestion(group_ids, current_user.id)})
+
+
+@workouts_bp.route('/plans/suggest/save', methods=['POST'])
+@login_required
+def suggest_save():
+    data = request.json or {}
+    name = (data.get('name') or '').strip() or 'Treino de Força'
+    group_ids = [int(g) for g in data.get('group_ids', []) if str(g).isdigit()]
+    items = data.get('exercises', [])
+    if not items:
+        return jsonify({'ok': False, 'error': 'Sem exercícios'}), 400
+    last = db.session.query(db.func.max(WorkoutPlan.sort_order)).filter_by(user_id=current_user.id).scalar() or 0
+    plan = WorkoutPlan(name=name[:150], user_id=current_user.id, sort_order=last + 1)
+    db.session.add(plan)
+    db.session.flush()
+    _set_plan_groups(plan, group_ids)
+    for i, it in enumerate(items):
+        ex = Exercise.query.get(int(it['exercise_id']))
+        if not ex:
+            continue
+        sets = int(it.get('sets') or 3)
+        reps = str(it.get('reps') or '8-10')[:50]
+        pe = PlanExercise(plan_id=plan.id, exercise_id=ex.id, sets=sets, reps=reps,
+                          rest_seconds=int(it.get('rest_seconds') or 90), order=i)
+        if hasattr(PlanExercise, 'series_data'):
+            pe.series_data = json.dumps([{'reps': reps} for _ in range(sets)])
+        db.session.add(pe)
+    db.session.commit()
+    return jsonify({'ok': True, 'plan_id': plan.id})
