@@ -38,6 +38,14 @@
     <div id="result" style="display:none;">
         <div class="card" style="padding:0; margin-top:12px;" id="list"></div>
         <div class="card" style="margin-top:12px;">
+            <label class="form-label">Pedir mais exercícios</label>
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <select id="moreGroup" class="form-control" style="flex:1;"></select>
+                <input type="number" id="moreCount" class="form-control" value="1" min="1" max="10" style="width:70px; text-align:center;">
+            </div>
+            <button class="btn btn-ghost btn-block" onclick="addMore()">+ Adicionar</button>
+        </div>
+        <div class="card" style="margin-top:12px;">
             <label class="form-label">Nome do treino</label>
             <input type="text" id="planName" class="form-control" style="margin-bottom:12px;">
             <button class="btn btn-red btn-block" onclick="savePlan()"
@@ -62,6 +70,21 @@ async function generate() {
     items = d.items;
     document.getElementById('planName').value = d.name;
     document.getElementById('result').style.display = 'block';
+    const sel = document.getElementById('moreGroup');
+    sel.innerHTML = Array.from(document.querySelectorAll('.gchip.sel'))
+        .map(c => `<option value="${c.dataset.id}">${c.textContent.trim()}</option>`).join('');
+    render();
+}
+async function addMore() {
+    const gid = document.getElementById('moreGroup').value;
+    const count = parseInt(document.getElementById('moreCount').value) || 1;
+    const exclude = items.map(i => i.exercise_id).join(',');
+    const r = await fetch(`/plans/suggest/more?group=${gid}&count=${count}&exclude=${exclude}`);
+    const d = await r.json();
+    if (!d.ok) { alert(d.error || 'Erro'); return; }
+    if (!d.items.length) { alert('Não há mais exercícios deste grupo.'); return; }
+    items = items.concat(d.items);
+    if (d.items.length < count) alert('Só havia ' + d.items.length + ' exercício(s) disponível(is) neste grupo.');
     render();
 }
 function render() {
