@@ -141,7 +141,7 @@
         {% endfor %}
     </div>
 
-    <div style="padding:12px 16px 80px; max-width:480px; margin:0 auto;">
+    <div id="exCardsWrap" style="padding:12px 16px 80px; max-width:480px; margin:0 auto;">
         {% for ex in exercises %}
         {% set ei = loop.index0 %}
         <div class="ex-card" id="ex{{ ei }}">
@@ -423,6 +423,7 @@ async function saveExEdit(ei, peId) {
 }
 
 const exerciseIds        = {{ exercise_ids_json|safe }};
+const exerciseGroupIds   = {{ exercise_group_ids_json|safe }};
 let   sessionId          = '{{ session_id }}';
 const planIdForSession   = {{ plan_id_for_session or 'null' }};
 const groupIdsForSession = {{ group_ids_for_session|tojson }};
@@ -547,18 +548,17 @@ function addSet(ei) {
         <div class="set-inp-wrap">
             <input class="set-inp" type="number" step="0.5" min="0"
                 id="w${ei}_${si}" value="${lastW}" placeholder="—"
-                oninput="trackChange(${ei}, ${si})" data-changed="1">
+                oninput="trackChange(${ei}, ${si})">
         </div>
         <input class="set-inp" type="text"
             id="r${ei}_${si}" value="${lastR}" placeholder="—"
-            oninput="trackChange(${ei}, ${si})" data-changed="1">
+            oninput="trackChange(${ei}, ${si})">
         <button class="set-check" id="chk${ei}_${si}"
             onclick="checkSet(${ei}, ${si})">✓</button>
         <button type="button" onclick="removeSetRow(${ei}, ${si}, this)"
             style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.85rem;padding:0;">✕</button>
     `;
     body.appendChild(div);
-    changed[ei+'_'+si] = true;
     // Renumber all visible rows
     body.querySelectorAll('.set-num').forEach((el,i) => el.textContent = i+1);
 }
@@ -574,19 +574,18 @@ function removeSetRow(ei, si, btn) {
     });
 }
 
-// Collect all sets for an exercise
+// Collect all sets for an exercise — in the DOM order the user sees/entered
 function collectSets(ei) {
-    const rows = document.querySelectorAll('[id^="sr'+ei+'_"]');
+    const rows = document.querySelectorAll('#setsBody'+ei+' .set-row');
     const sets = [];
-    rows.forEach((_, si) => {
-        const wEl = document.getElementById('w'+ei+'_'+si);
-        const rEl = document.getElementById('r'+ei+'_'+si);
+    rows.forEach(row => {
+        const wEl = row.querySelector('input[type="number"]');
+        const rEl = row.querySelector('input[type="text"]');
         const w = wEl?.value?.trim() || '';
         const r = rEl?.value?.trim() || '';
-        const wChanged = wEl?.dataset.changed === '1';
-        const rChanged = rEl?.dataset.changed === '1';
-        // Only save if user explicitly changed weight OR reps, AND reps is filled
-        if (r && (wChanged || rChanged)) {
+        const touched = row.classList.contains('done-row')
+            || wEl?.dataset.changed === '1' || rEl?.dataset.changed === '1';
+        if (r && touched) {
             sets.push({ weight: w ? parseFloat(w) : null, reps: r });
         }
     });
@@ -594,7 +593,14 @@ function collectSets(ei) {
 }
 
 // Save exercise in real-time
-async function _saveExercise(ei) {
+let saveChain = Promise.resolve();
+function _saveExercise(ei) {
+    const p = saveChain.then(() => _doSaveExercise(ei));
+    saveChain = p.catch(() => {});
+    return p;
+}
+
+async function _doSaveExercise(ei) {
     const exId = exerciseIds[ei];
     if (!sessionId || !exId) return false;
     const sets = collectSets(ei);
@@ -747,6 +753,7 @@ function selectAddEx(id, name) {
 function addExerciseToLive(exId, name, sets, reps) {
     const ei = exerciseIds.length;
     exerciseIds.push(exId);
+    exerciseGroupIds.push(parseInt(document.getElementById('addExGroup').value) || null);
     if (!setCounters[ei]) setCounters[ei] = sets;
 
     // Add dot
@@ -775,11 +782,11 @@ function addExerciseToLive(exId, name, sets, reps) {
             <div class="set-inp-wrap">
                 <input class="set-inp" type="number" step="0.5" min="0"
                     id="w${ei}_${si}" placeholder="—"
-                    oninput="trackChange(${ei},${si})" data-changed="1" style="width:100%;">
+                    oninput="trackChange(${ei},${si})" style="width:100%;">
             </div>
             <input class="set-inp" type="text" id="r${ei}_${si}"
                 value="${reps}" placeholder="—"
-                oninput="trackChange(${ei},${si})" data-changed="1" style="width:100%;">
+                oninput="trackChange(${ei},${si})" style="width:100%;">
             <button class="set-check" id="chk${ei}_${si}" onclick="checkSet(${ei},${si})">✓</button>
             <button type="button" onclick="removeSetRow(${ei},${si},this)"
                 style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.85rem;padding:0;">✕</button>
@@ -787,7 +794,7 @@ function addExerciseToLive(exId, name, sets, reps) {
     }
 
     // Add exercise card
-    const detail = document.getElementById('detailScreen').querySelector('div');
+    const detail = document.getElementById('exCardsWrap');
     const card = document.createElement('div');
     card.className = 'ex-card';
     card.id = 'ex' + ei;
@@ -806,11 +813,39 @@ function addExerciseToLive(exId, name, sets, reps) {
             <div id="setsBody${ei}">${setRows}</div>
             <button class="add-set-btn" onclick="addSet(${ei})">+ Adicionar série</button>
         </div>
+        <div id="histBox${ei}"></div>
         <button class="ok-btn" onclick="saveAndReturn(${ei})">✓ OK — Retornar aos exercícios</button>`;
     detail.appendChild(card);
 
     closeAddEx();
     openExercise(ei);
+    loadAvulsoHistory(ei, exId);
+}
+
+async function loadAvulsoHistory(ei, exId) {
+    try {
+        const resp = await fetch('/live/exercise-history/' + exId);
+        const data = await resp.json();
+        (data.last_sets || []).forEach((s, si) => {
+            const w = document.getElementById('w'+ei+'_'+si);
+            const r = document.getElementById('r'+ei+'_'+si);
+            if (!w || !r) return;
+            if (s.weight != null) w.value = s.weight;
+            if (/^[\d\-]+$/.test(s.reps || '')) r.value = s.reps;
+        });
+        if (data.history && data.history.length) {
+            let lastDate = '';
+            const rows = data.history.map(h => {
+                const d = h.date === lastDate ? '' : h.date;
+                lastDate = h.date;
+                return `<tr><td class="d">${d}</td><td class="w">${h.weight != null ? h.weight + 'kg' : '—'}</td><td>${h.reps || '—'}</td></tr>`;
+            }).join('');
+            document.getElementById('histBox'+ei).innerHTML =
+                `<div class="hist-card"><div class="hist-card-head">Histórico</div>
+                 <table class="hist-table"><thead><tr><th style="text-align:left; padding-left:12px;">Data</th><th>Kg</th><th>Reps</th></tr></thead>
+                 <tbody>${rows}</tbody></table></div>`;
+        }
+    } catch(e) {}
 }
 
 function confirmAddEx() {
@@ -822,7 +857,17 @@ function confirmAddEx() {
     addExerciseToLive(addExSelectedId, name, sets, reps);
 }
 
-function openFinish()  { document.getElementById('finishModal').classList.add('active'); }
+function openFinish() {
+    const trained = new Set();
+    document.querySelectorAll('.ex-dot.has-data').forEach(d => {
+        const ei = parseInt(d.id.replace('dot',''));
+        if (exerciseGroupIds[ei]) trained.add(exerciseGroupIds[ei]);
+    });
+    document.querySelectorAll('.group-chip').forEach(chip => {
+        chip.classList.toggle('sel', trained.has(parseInt(chip.dataset.id)));
+    });
+    document.getElementById('finishModal').classList.add('active');
+}
 function closeFinish() { document.getElementById('finishModal').classList.remove('active'); }
 
 function submitFinish() {
