@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Sugestão de força{% endblock %}
+{% block topbar %}
+<div class="topbar">
+    <a href="{{ url_for('workouts.index') }}" class="topbar-back">←</a>
+    <h1>TREINO DE FORÇA</h1>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.gchips { display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 16px; }
+.gchip { background:var(--bg4); border:1.5px solid var(--border); border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:700; font-size:0.74rem; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; user-select:none; }
+.gchip.sel { border-color:var(--red); background:var(--red-glow); color:var(--red); }
+.sug-row { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); }
+.sug-row:last-child { border-bottom:none; }
+.sug-name { font-weight:600; font-size:0.9rem; }
+.sug-meta { font-size:0.7rem; color:var(--text2); margin-top:2px; text-transform:uppercase; letter-spacing:0.4px; }
+.sug-x { background:none; border:none; color:var(--text3); font-size:1rem; cursor:pointer; padding:6px; }
+.note { font-size:0.72rem; color:var(--text2); margin-top:10px; line-height:1.4; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="card">
+        <div class="panel-label" style="font-size:0.62rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1.2px;">Grupos musculares</div>
+        <div class="gchips" id="gchips">
+            {% for g in groups %}
+            <div class="gchip {% if g.id in preselected %}sel{% endif %}" data-id="{{ g.id }}" onclick="this.classList.toggle('sel')">{{ g.name }}</div>
+            {% endfor %}
+        </div>
+        <button class="btn btn-red btn-block" onclick="generate()"
+            style="font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px;">Gerar sugestão</button>
+        <div class="note">Sugestão por regras: prioriza exercícios multiarticulares com poucas repetições e carga alta (5×4-6), seguidos de acessórios (3×8-10). Ajuste à vontade antes de salvar.</div>
+    </div>
+
+    <div id="result" style="display:none;">
+        <div class="card" style="padding:0; margin-top:12px;" id="list"></div>
+        <div class="card" style="margin-top:12px;">
+            <label class="form-label">Nome do treino</label>
+            <input type="text" id="planName" class="form-control" style="margin-bottom:12px;">
+            <button class="btn btn-red btn-block" onclick="savePlan()"
+                style="font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.5px;">Salvar como treino</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let items = [];
+function selectedGroups() {
+    return Array.from(document.querySelectorAll('.gchip.sel')).map(c => parseInt(c.dataset.id));
+}
+async function generate() {
+    const ids = selectedGroups();
+    if (!ids.length) { alert('Selecione pelo menos um grupo'); return; }
+    const r = await fetch('/plans/suggest/generate?groups=' + ids.join(','));
+    const d = await r.json();
+    if (!d.ok) { alert(d.error || 'Erro'); return; }
+    items = d.items;
+    document.getElementById('planName').value = d.name;
+    document.getElementById('result').style.display = 'block';
+    render();
+}
+function render() {
+    const list = document.getElementById('list');
+    if (!items.length) { list.innerHTML = '<div class="sug-row">Nenhum exercício disponível para estes grupos.</div>'; return; }
+    list.innerHTML = items.map((it, i) => `
+        <div class="sug-row">
+            <div style="flex:1;min-width:0;">
+                <div class="sug-name">${it.name}</div>
+                <div class="sug-meta">${it.group} · ${it.sets}×${it.reps} · ${it.rest_seconds}s${it.compound ? ' · base' : ''}</div>
+            </div>
+            <button class="sug-x" onclick="removeItem(${i})">✕</button>
+        </div>`).join('');
+}
+function removeItem(i) { items.splice(i, 1); render(); }
+async function savePlan() {
+    if (!items.length) { alert('Nenhum exercício'); return; }
+    const r = await fetch('/plans/suggest/save', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: document.getElementById('planName').value,
+                               group_ids: selectedGroups(), exercises: items })
+    });
+    const d = await r.json();
+    if (d.ok) window.location.href = '/plans'; else alert(d.error || 'Erro ao salvar');
+}
+</script>
+{% endblock %}
