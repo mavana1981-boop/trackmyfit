@@ -491,6 +491,29 @@ def suggest_generate():
                     'items': _build_suggestion(group_ids, current_user.id)})
 
 
+@workouts_bp.route('/plans/suggest/more')
+@login_required
+def suggest_more():
+    """Extra exercises for one group, skipping those already in the list."""
+    from models import SessionExercise, WorkoutSession
+    gid = request.args.get('group', type=int)
+    count = max(1, min(request.args.get('count', 1, type=int), 10))
+    exclude = {int(x) for x in request.args.get('exclude', '').split(',') if x.isdigit()}
+    if not gid:
+        return jsonify({'ok': False, 'error': 'Selecione um grupo'}), 400
+    done_ids = {r[0] for r in db.session.query(SessionExercise.exercise_id)
+                .join(WorkoutSession).filter(WorkoutSession.user_id == current_user.id).distinct().all()}
+    exs = [e for e in Exercise.query.filter_by(muscle_group_id=gid).all() if e.id not in exclude]
+    exs.sort(key=lambda e: (-_strength_score(e.name, e.id in done_ids), e.name))
+    items = []
+    for ex in exs[:count]:
+        comp = _is_compound(ex.name)
+        items.append({'exercise_id': ex.id, 'name': ex.name, 'group': ex.muscle_group.name,
+                      'group_id': gid, 'compound': comp, 'sets': 5 if comp else 3,
+                      'reps': '4-6' if comp else '8-10', 'rest_seconds': 150 if comp else 90})
+    return jsonify({'ok': True, 'items': items})
+
+
 @workouts_bp.route('/plans/suggest/save', methods=['POST'])
 @login_required
 def suggest_save():
